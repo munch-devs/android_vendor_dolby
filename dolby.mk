@@ -21,6 +21,10 @@ PRODUCT_PACKAGES += \
     vendor.dolby.media.c2@1.0-service.xml \
     vendor.dolby.media.dvs-service.xml
 
+# Dolby Vision Parts (Override supported HDR types to include Dolby Vision)
+PRODUCT_PACKAGES += \
+    DolbyVisionParts
+
 # Properties
 PRODUCT_VENDOR_PROPERTIES += \
     ro.vendor.dolby.dax.version=DAX3_3.7.0.8_r1 \
