@@ -12,6 +12,10 @@ DOLBY_PATH := vendor/dolby
 PRODUCT_COPY_FILES += \
     $(DOLBY_PATH)/configs/dolby/dax-default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/dolby/dax-default.xml
 
+# LunarisDolby
+PRODUCT_PACKAGES += \
+    LunarisDolby
+    
 # Properties
 PRODUCT_VENDOR_PROPERTIES += \
     ro.vendor.dolby.dax.version=DAX3_3.7.0.8_r1 \
