@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.android.dolby.geq.data.bandControlPoints
 import com.android.settingslib.spa.framework.theme.SettingsDimension
 import com.android.settingslib.spa.framework.theme.settingsBackground
 
@@ -26,7 +27,7 @@ fun EqualizerScreen(viewModel: EqualizerViewModel, modifier: Modifier = Modifier
     ) {
         Column(verticalArrangement = Arrangement.Top, modifier = Modifier.fillMaxHeight()) {
             PresetSelector(viewModel = viewModel)
-            EqualizerBands(viewModel = viewModel)
+            EqualizerBands(viewModel = viewModel, controlPoints = bandControlPoints(10))
         }
     }
 }

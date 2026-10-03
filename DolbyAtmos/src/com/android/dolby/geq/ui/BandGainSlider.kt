@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.dolby.geq.data.BandGain
+import com.android.dolby.geq.data.formatHz
 
 @Composable
 fun BandGainSlider(bandGain: BandGain, onValueChangeFinished: (Int) -> Unit) {
@@ -66,15 +67,7 @@ fun BandGainSlider(bandGain: BandGain, onValueChangeFinished: (Int) -> Unit) {
                     .height(40.dp)
                     .padding(8.dp),
         )
-        SliderText(
-            with(bandGain.band) {
-                if (this >= 1000) {
-                    "${this / 1000}k"
-                } else {
-                    "$this"
-                }
-            }
-        )
+        SliderText(formatHz(bandGain.band))
     }
 }
 

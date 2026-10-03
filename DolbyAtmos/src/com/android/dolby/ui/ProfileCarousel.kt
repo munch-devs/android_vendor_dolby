@@ -25,17 +25,17 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,6 +49,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.android.dolby.R
 import kotlin.math.abs
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 
 /** Everything one flashcard needs; built once, so pager pages don't re-resolve resources. */
 @Immutable
@@ -59,20 +62,23 @@ private class ProfileCard(
     @DrawableRes val image: Int,
 )
 
-/** Profile ids (see dolby_profile_values) -> artwork. Unknown ids fall back to the Custom one. */
+/**
+ * Profile ids (see dolby_profile_values, mirrors dax-default.xml) -> artwork. The mobility
+ * profiles (4-7) have no artwork of their own yet and fall back to the Custom one.
+ */
 @DrawableRes
 private fun imageFor(value: Int): Int =
     when (value) {
         0 -> R.drawable.img_profile_dynamic
         1 -> R.drawable.img_profile_video
         2 -> R.drawable.img_profile_music
-        8 -> R.drawable.img_profile_voice
         else -> R.drawable.img_profile_custom
     }
 
 /**
- * Horizontally swipeable profile flashcards. Swiping only browses; tapping a card (or its button)
- * applies the profile, so flicking past "Voice" doesn't briefly switch the audio chain.
+ * Horizontally swipeable profile flashcards. The profile is applied as soon as the pager *settles*
+ * on a card (not while it is still flicking past), so passing over "Movie" on the way to "Music"
+ * doesn't briefly switch the audio chain. Tapping a peeking neighbour scrolls to it, which applies it.
  */
 @Composable
 internal fun ProfileCarousel(
@@ -98,9 +104,32 @@ internal fun ProfileCarousel(
     val selectedIndex = cards.indexOfFirst { it.value == profile }
     val pagerState = rememberPagerState(initialPage = selectedIndex.coerceAtLeast(0)) { cards.size }
 
-    // Follow changes made elsewhere (QS tile, tapping a peeking neighbour card).
+    val scope = rememberCoroutineScope()
+    val currentEnabled by rememberUpdatedState(enabled)
+    val currentCards by rememberUpdatedState(cards)
+    val currentOnProfileChange by rememberUpdatedState(onProfileChange)
+
+    // Swipe -> apply. settledPage only changes once the pager has come to rest, so a fast flick
+    // across several cards results in a single write. drop(1) skips the initial page, which
+    // would otherwise overwrite an unknown profile (selectedIndex == -1) with page 0.
+    // The ViewModel ignores a profile that is already active, so echoes are harmless.
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }
+            .drop(1)
+            .distinctUntilChanged()
+            .collect { page ->
+                if (currentEnabled) currentOnProfileChange(currentCards[page].value)
+            }
+    }
+
+    // Apply -> follow. Changes made elsewhere (QS tile, reset) move the pager, unless the user
+    // is dragging it right now.
     LaunchedEffect(selectedIndex) {
-        if (selectedIndex >= 0 && selectedIndex != pagerState.settledPage) {
+        if (
+            selectedIndex >= 0 &&
+                selectedIndex != pagerState.settledPage &&
+                !pagerState.isScrollInProgress
+        ) {
             pagerState.animateScrollToPage(selectedIndex)
         }
     }
@@ -118,7 +147,7 @@ internal fun ProfileCarousel(
                 card = card,
                 selected = card.value == profile,
                 enabled = enabled,
-                onSelect = { onProfileChange(card.value) },
+                onSelect = { scope.launch { pagerState.animateScrollToPage(page) } },
                 // Neighbours shrink/fade slightly for a "deck" feel.
                 modifier =
                     Modifier.graphicsLayer {
@@ -147,7 +176,7 @@ private fun ProfileFlashcard(
     val colors = MaterialTheme.colorScheme
     val container by
         animateColorAsState(
-            if (selected) colors.primaryContainer else colors.surfaceContainerHigh,
+            if (selected) colors.primaryContainer else colors.surfaceContainerHighest,
             label = "cardContainer",
         )
     val content = if (selected) colors.onPrimaryContainer else colors.onSurface
@@ -166,44 +195,43 @@ private fun ProfileFlashcard(
             ),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Image(
-            painter = painterResource(card.image),
-            contentDescription = null, // decorative; the name below says it all
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().aspectRatio(2.2f),
-        )
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(card.name, style = MaterialTheme.typography.headlineSmall)
-            Text(
-                card.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color =
-                    if (selected) colors.onPrimaryContainer.copy(alpha = 0.8f)
-                    else colors.onSurfaceVariant,
-                minLines = 3,
-                maxLines = 3,
-            )
-            Row(Modifier.padding(top = 10.dp)) {
-                if (selected) {
-                    Button(
-                        onClick = {},
-                        enabled = false,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                disabledContainerColor = colors.primary,
-                                disabledContentColor = colors.onPrimary,
-                            ),
-                    ) {
-                        Icon(Icons.Default.Check, null, Modifier.size(18.dp))
-                        Text(
-                            stringResource(R.string.dolby_selected),
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                } else {
-                    FilledTonalButton(onClick = onSelect, enabled = enabled) {
-                        Text(stringResource(R.string.dolby_select))
-                    }
+        Box {
+            Column {
+                Image(
+                    painter = painterResource(card.image),
+                    contentDescription = null, // decorative; the name below says it all
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(2.2f),
+                )
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(card.name, style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        card.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color =
+                            if (selected) colors.onPrimaryContainer.copy(alpha = 0.8f)
+                            else colors.onSurfaceVariant,
+                        minLines = 3,
+                        maxLines = 3,
+                    )
+                }
+            }
+            // The active profile is marked by a check badge; there is no confirm button.
+            if (selected) {
+                Box(
+                    Modifier.align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(colors.primary),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = stringResource(R.string.dolby_selected),
+                        tint = colors.onPrimary,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }

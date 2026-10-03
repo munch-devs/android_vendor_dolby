@@ -44,6 +44,19 @@ class EqualizerRepository(private val context: Context) {
 
     val defaultPreset by lazy { builtInPresets[0] } // Flat
 
+    // UI-only choices, kept apart from "presets" (every entry of that file is a user preset).
+    private val uiPrefs by lazy {
+        context.getSharedPreferences("equalizer_ui", Context.MODE_PRIVATE)
+    }
+
+    var bandCount: Int
+        get() = uiPrefs.getInt(KEY_BAND_COUNT, 10).takeIf { it in EQ_BAND_COUNTS } ?: 10
+        set(value) = uiPrefs.edit().putInt(KEY_BAND_COUNT, value).apply()
+
+    var curveView: Boolean
+        get() = uiPrefs.getBoolean(KEY_CURVE_VIEW, true)
+        set(value) = uiPrefs.edit().putBoolean(KEY_CURVE_VIEW, value).apply()
+
     // User defined presets are stored in a SharedPreferences as
     // key - preset name
     // value - comma separated string of gains
@@ -109,42 +122,32 @@ class EqualizerRepository(private val context: Context) {
 
     private companion object {
         const val TAG = "EqRepository"
+        const val KEY_BAND_COUNT = "band_count"
+        const val KEY_CURVE_VIEW = "curve_view"
 
-        val tenBandFreqs = intArrayOf(32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000)
-
+        // The backend works with 20 bands and so do we; the UI only decides how many of them
+        // are shown as control points (see bandControlPoints).
         fun deserializeGains(bandGains: String): List<BandGain> {
             val gains: List<Int> =
                 bandGains
                     .split(",")
                     .runCatching {
-                        require(size == 20) { "Preset must have 20 elements, has only $size!" }
-                        map { it.toInt() }.twentyToTenBandGains()
+                        require(size == EQ_BAND_FREQUENCIES.size) {
+                            "Preset must have ${EQ_BAND_FREQUENCIES.size} elements, has only $size!"
+                        }
+                        map { it.trim().toInt() }
                     }
                     .onFailure { exception -> Log.e(TAG, "Failed to parse preset", exception) }
                     .getOrDefault(
                         // fallback to flat
-                        List<Int>(10) { 0 }
+                        List(EQ_BAND_FREQUENCIES.size) { 0 }
                     )
-            return List(10) { index -> BandGain(band = tenBandFreqs[index], gain = gains[index]) }
-        }
-
-        fun serializeGains(bandGains: List<BandGain>): String {
-            return bandGains.map { it.gain }.tenToTwentyBandGains().joinToString(",")
-        }
-
-        // we show only 10 bands in UI however backend requires 20 bands
-        fun List<Int>.tenToTwentyBandGains() =
-            List<Int>(20) { index ->
-                if (index % 2 == 1 && index < 19) {
-                    // every odd element is the average of its surrounding elements
-                    (this[(index - 1) / 2] + this[(index + 1) / 2]) / 2
-                } else {
-                    this[index / 2]
-                }
+            return List(gains.size) { index ->
+                BandGain(band = EQ_BAND_FREQUENCIES[index], gain = gains[index])
             }
+        }
 
-        fun List<Int>.twentyToTenBandGains() =
-            // skip every odd element
-            filterIndexed { index, _ -> index % 2 == 0 }
+        fun serializeGains(bandGains: List<BandGain>): String =
+            bandGains.joinToString(separator = ",") { it.gain.toString() }
     }
 }

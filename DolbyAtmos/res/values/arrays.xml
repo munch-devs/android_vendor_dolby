@@ -10,24 +10,33 @@
         <item>@string/dolby_profile_dynamic</item>
         <item>@string/dolby_profile_video</item>
         <item>@string/dolby_profile_music</item>
-        <item>@string/dolby_profile_voice</item>
         <item>@string/dolby_profile_custom</item>
+        <item>@string/dolby_profile_mobility_default</item>
+        <item>@string/dolby_profile_mobility_on_the_go</item>
+        <item>@string/dolby_profile_mobility_commute</item>
+        <item>@string/dolby_profile_mobility_travel</item>
     </string-array>
 
     <string-array name="dolby_profile_values">
         <item>0</item>
         <item>1</item>
         <item>2</item>
-        <item>8</item>
         <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
     </string-array>
 
     <string-array name="dolby_profile_descriptions">
         <item>@string/dolby_profile_dynamic_desc</item>
         <item>@string/dolby_profile_video_desc</item>
         <item>@string/dolby_profile_music_desc</item>
-        <item>@string/dolby_profile_voice_desc</item>
         <item>@string/dolby_profile_custom_desc</item>
+        <item>@string/dolby_profile_mobility_default_desc</item>
+        <item>@string/dolby_profile_mobility_on_the_go_desc</item>
+        <item>@string/dolby_profile_mobility_commute_desc</item>
+        <item>@string/dolby_profile_mobility_travel_desc</item>
     </string-array>
 
     <string-array name="dolby_preset_entries" translatable="false">
@@ -97,9 +106,9 @@
 
     <string-array name="dolby_ieq_entries">
         <item>@string/dolby_off</item>
+        <item>@string/dolby_detailed</item>
         <item>@string/dolby_balanced</item>
         <item>@string/dolby_warm</item>
-        <item>@string/dolby_detailed</item>
     </string-array>
 
     <string-array name="dolby_ieq_values">

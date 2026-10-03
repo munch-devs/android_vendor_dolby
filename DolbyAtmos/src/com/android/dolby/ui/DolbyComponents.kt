@@ -129,10 +129,12 @@ internal fun SwitchRow(
     enabled: Boolean,
     supporting: String?,
     onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector? = null,
 ) {
     ListItem(
         headlineContent = { Text(stringResource(title)) },
         supportingContent = supporting?.let { { Text(it) } },
+        leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
         // The whole row toggles; the Switch itself is display-only (better for TalkBack).
         trailingContent = { Switch(checked = checked, onCheckedChange = null, enabled = enabled) },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),

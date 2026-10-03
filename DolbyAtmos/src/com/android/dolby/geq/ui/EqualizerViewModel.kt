@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.android.dolby.DolbyConstants.Companion.dlog
+import com.android.dolby.geq.data.EQ_BAND_COUNTS
 import com.android.dolby.geq.data.EqualizerRepository
 import com.android.dolby.geq.data.Preset
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,8 +21,20 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 const val TAG = "EqViewModel"
+
+/** Fills the bands between consecutive [points] with a straight line between their gains. */
+private fun interpolate(gains: MutableList<Int>, points: List<Int>) {
+    for (k in 0 until points.size - 1) {
+        val a = points[k]
+        val b = points[k + 1]
+        for (i in a + 1 until b) {
+            gains[i] = (gains[a] + (gains[b] - gains[a]) * (i - a) / (b - a).toFloat()).roundToInt()
+        }
+    }
+}
 
 class EqualizerViewModel(private val repository: EqualizerRepository) : ViewModel() {
 
@@ -30,6 +43,12 @@ class EqualizerViewModel(private val repository: EqualizerRepository) : ViewMode
 
     private val _preset = MutableStateFlow(repository.defaultPreset)
     val preset = _preset.asStateFlow()
+
+    private val _bandCount = MutableStateFlow(repository.bandCount)
+    val bandCount = _bandCount.asStateFlow()
+
+    private val _curveView = MutableStateFlow(repository.curveView)
+    val curveView = _curveView.asStateFlow()
 
     private var presetRestored = false
 
@@ -93,18 +112,33 @@ class EqualizerViewModel(private val repository: EqualizerRepository) : ViewMode
         _preset.value = preset
     }
 
-    fun setGain(index: Int, gain: Int) {
+    fun setBandCount(count: Int) {
+        if (count !in EQ_BAND_COUNTS) return
+        _bandCount.value = count
+        repository.bandCount = count
+    }
+
+    fun setCurveView(curve: Boolean) {
+        _curveView.value = curve
+        repository.curveView = curve
+    }
+
+    /**
+     * Sets the gain of band [index] (a position in the 20-band backend array). When fewer bands
+     * are shown, [controlPoints] lists the positions of the visible ones and the bands between
+     * them follow by linear interpolation, so the curve stays smooth on the backend.
+     */
+    fun setGain(index: Int, gain: Int, controlPoints: List<Int> = emptyList()) {
         dlog(TAG, "setGain($index, $gain)")
         _preset.value =
             _preset.value.run {
+                val gains = bandGains.map { it.gain }.toMutableList()
+                gains[index] = gain
+                if (controlPoints.size in 2 until gains.size) interpolate(gains, controlPoints)
                 copy(
                     name = if (!isUserDefined) "Custom" else name,
-                    bandGains =
-                        bandGains
-                            .toMutableList()
-                            // create a new object to ensure the flow emits an update.
-                            .apply { this[index] = this[index].copy(gain = gain) }
-                            .toList(),
+                    // create new objects to ensure the flow emits an update.
+                    bandGains = bandGains.mapIndexed { i, band -> band.copy(gain = gains[i]) },
                     isMutated = true,
                 )
             }

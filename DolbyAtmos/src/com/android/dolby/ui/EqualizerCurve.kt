@@ -32,6 +32,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import com.android.dolby.geq.data.formatHz
 import com.android.dolby.geq.data.BandGain
 import kotlin.math.roundToInt
 
@@ -67,10 +68,9 @@ private class Plot(
 private fun Density.plotFor(size: Size, bands: Int) =
     Plot(size.width, size.height, 36.dp.toPx(), 14.dp.toPx(), 20.dp.toPx(), 26.dp.toPx(), bands)
 
-private fun hz(band: Int) = if (band >= 1000) "${band / 1000}k" else "$band"
 
 /**
- * The same ten bands as the vertical sliders, drawn as one smooth curve. Touch or drag anywhere:
+ * The same bands as the vertical sliders (10, 15 or 20), drawn as one smooth curve. Touch or drag anywhere:
  * the nearest band follows your finger and is written when you let go (same cadence as the sliders).
  */
 @Composable
@@ -176,8 +176,11 @@ internal fun EqualizerCurve(
             drawCircle(cs.primary, radius = (if (isActive) 9 else 6).dp.toPx(), center = c)
             drawCircle(cs.surfaceContainerHigh, radius = (if (isActive) 4f else 2.5f).dp.toPx(), center = c)
 
-            val f = measurer.measure(hz(gains[i].band), axisStyle)
-            drawText(f, topLeft = Offset(c.x - f.size.width / 2f, plot.top + plot.h + 6.dp.toPx()))
+            // With 15/20 bands the labels would overlap, so only every second one is drawn.
+            if (n <= 10 || i % 2 == 0) {
+                val f = measurer.measure(formatHz(gains[i].band), axisStyle)
+                drawText(f, topLeft = Offset(c.x - f.size.width / 2f, plot.top + plot.h + 6.dp.toPx()))
+            }
 
             if (isActive) {
                 val v = measurer.measure("%+.1f dB".format(live[i] / 10f), valueStyle)
