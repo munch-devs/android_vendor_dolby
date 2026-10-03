@@ -68,4 +68,17 @@
     <string name="dolby_warm">Warm</string>
     <string name="dolby_detailed">Detailed</string>
 
+    <!-- Tabs and profile flashcards -->
+    <string name="dolby_tab_profile">Profile</string>
+    <string name="dolby_tab_equalizer">Equalizer</string>
+    <string name="dolby_tab_effects">Effects</string>
+    <string name="dolby_select">Use this profile</string>
+    <string name="dolby_selected">Selected</string>
+    <string name="dolby_profile_dynamic_desc">Automatically adapts the sound to whatever is playing, so you never have to switch by hand.</string>
+    <string name="dolby_profile_video_desc">Wide, immersive sound with clear dialogue, tuned for movies, series and video.</string>
+    <string name="dolby_profile_music_desc">Balanced, detailed sound with fuller bass and a spacious stage for music.</string>
+    <string name="dolby_profile_voice_desc">Brings voices forward for calls, podcasts, audiobooks and voice notes.</string>
+    <string name="dolby_profile_custom_desc">Your own mix. Fine-tune the equalizer and effects to taste.</string>
+    <string name="dolby_geq_view_bars">Bars</string>
+    <string name="dolby_geq_view_curve">Curve</string>
 </resources>

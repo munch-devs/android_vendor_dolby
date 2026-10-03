@@ -22,6 +22,14 @@
         <item>3</item>
     </string-array>
 
+    <string-array name="dolby_profile_descriptions">
+        <item>@string/dolby_profile_dynamic_desc</item>
+        <item>@string/dolby_profile_video_desc</item>
+        <item>@string/dolby_profile_music_desc</item>
+        <item>@string/dolby_profile_voice_desc</item>
+        <item>@string/dolby_profile_custom_desc</item>
+    </string-array>
+
     <string-array name="dolby_preset_entries" translatable="false">
         <item>@string/dolby_preset_default</item>
         <item>@string/dolby_preset_rock</item>

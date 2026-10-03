@@ -6,7 +6,6 @@
 
 package com.android.dolby.ui
 
-import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -16,7 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.dolby.DolbyController
 import com.android.dolby.R
-import com.android.dolby.geq.EqualizerActivity
+import com.android.dolby.geq.ui.EqualizerViewModel
 
 /** The only composable that knows about the ViewModel; everything below is stateless. */
 @Composable
@@ -30,6 +29,8 @@ internal fun DolbyRoute() {
             stereoSupported = app.resources.getBoolean(R.bool.dolby_stereo_widening_supported),
         )
     }
+    // Same view model the standalone Graphic EQ screen used; now hosted by this screen.
+    val eqVm: EqualizerViewModel = viewModel(factory = EqualizerViewModel.Factory)
     val state by vm.ui.collectAsStateWithLifecycle()
 
     // Pick up changes made elsewhere (QS tile, Graphic EQ screen).
@@ -39,7 +40,7 @@ internal fun DolbyRoute() {
     }
 
     val actions =
-        remember(vm, ctx) {
+        remember(vm) {
             DolbyActions(
                 onEnabledChange = vm::setEnabled,
                 onProfileChange = vm::setProfile,
@@ -51,11 +52,13 @@ internal fun DolbyRoute() {
                 onBassChange = vm::setBass,
                 onVolumeChange = vm::setVolume,
                 onReset = vm::reset,
-                onOpenEqualizer = {
-                    ctx.startActivity(Intent(ctx, EqualizerActivity::class.java))
-                },
             )
         }
 
-    DolbyScreen(state = state, stereoSupported = vm.stereoSupported, actions = actions)
+    DolbyScreen(
+        state = state,
+        stereoSupported = vm.stereoSupported,
+        actions = actions,
+        equalizer = { enabled -> EqualizerPanel(eqVm, enabled) },
+    )
 }
