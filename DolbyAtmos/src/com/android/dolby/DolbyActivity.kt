@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-24 Paranoid Android
+ * Copyright (C) 2024 Paranoid Android
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,19 +15,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.platform.LocalContext
-import com.android.dolby.ui.DolbyScreen
+import com.android.dolby.ui.DolbyRoute
 
 class DolbyActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Compose draws its own top app bar; hide the platform one that comes with the
+        // Android (DeviceDefault) theme.
+        actionBar?.apply {
+            setShowHideAnimationEnabled(false)
+            hide()
+        }
         enableEdgeToEdge()
         setContent {
-            val ctx = LocalContext.current
+            val context = LocalContext.current
             val colors =
-                if (isSystemInDarkTheme()) dynamicDarkColorScheme(ctx)
-                else dynamicLightColorScheme(ctx)
-            MaterialTheme(colorScheme = colors) { DolbyScreen() }
+                if (isSystemInDarkTheme()) dynamicDarkColorScheme(context)
+                else dynamicLightColorScheme(context)
+            MaterialTheme(colorScheme = colors) { DolbyRoute() }
         }
     }
 }
