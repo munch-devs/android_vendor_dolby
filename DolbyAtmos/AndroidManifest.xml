@@ -14,7 +14,7 @@
         android:allowBackup="false"
         android:label="@string/dolby_title"
         android:persistent="true"
-        android:theme="@style/Theme.Dolby">
+        android:theme="@style/Theme.SubSettingsBase.Expressive">
 
         <receiver
             android:name=".BootCompletedReceiver"
@@ -27,6 +27,7 @@
         <activity
             android:name=".DolbyActivity"
             android:label="@string/dolby_title"
+            android:theme="@android:style/Theme.DeviceDefault.DayNight"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.android.settings.action.IA_SETTINGS" />
@@ -42,9 +43,9 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <meta-data android:name="com.android.settings.category"
-                       android:value="com.android.settings.category.ia.sound" />
+                android:value="com.android.settings.category.ia.sound" />
             <meta-data android:name="com.android.settings.summary_uri"
-                       android:value="content://com.android.dolby.summary/dolby" />
+                android:value="content://com.android.dolby.summary/dolby" />
         </activity>
 
         <activity
@@ -75,4 +76,3 @@
 
     </application>
 </manifest>
-
