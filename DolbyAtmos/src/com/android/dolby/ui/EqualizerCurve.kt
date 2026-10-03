@@ -174,7 +174,7 @@ internal fun EqualizerCurve(
             val c = Offset(plot.x(i), plot.y(live[i]))
             val isActive = i == active
             drawCircle(cs.primary, radius = (if (isActive) 9 else 6).dp.toPx(), center = c)
-            drawCircle(cs.surfaceContainerHigh, radius = (if (isActive) 4 else 2.5f).dp.toPx(), center = c)
+            drawCircle(cs.surfaceContainerHigh, radius = (if (isActive) 4f else 2.5f).dp.toPx(), center = c)
 
             val f = measurer.measure(hz(gains[i].band), axisStyle)
             drawText(f, topLeft = Offset(c.x - f.size.width / 2f, plot.top + plot.h + 6.dp.toPx()))
