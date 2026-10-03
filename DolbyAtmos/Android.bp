@@ -15,13 +15,20 @@ android_app {
     system_ext_specific: true,
     privileged: true,
 
-    overrides: ["MusicFX", "AudioFX"],
+    overrides: [
+        "MusicFX",
+        "AudioFX",
+    ],
     static_libs: [
         "SettingsLib",
         "SpaLib",
         "androidx.activity_activity-compose",
+        "androidx.compose.foundation_foundation",
         "androidx.compose.material3_material3",
         "androidx.compose.runtime_runtime",
+        "androidx.compose.ui_ui",
+        "androidx.lifecycle_lifecycle-runtime-compose",
+        "androidx.lifecycle_lifecycle-viewmodel-compose",
         "androidx.preference_preference",
     ],
 }

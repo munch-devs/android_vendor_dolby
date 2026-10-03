@@ -7,22 +7,27 @@
 package com.android.dolby
 
 import android.os.Bundle
-import com.android.dolby.preference.DolbySettingsFragment
-import com.android.settingslib.collapsingtoolbar.CollapsingToolbarBaseActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
+import com.android.dolby.ui.DolbyScreen
 
-private const val TAG = "DolbyActivity"
-
-class DolbyActivity : CollapsingToolbarBaseActivity() {
+class DolbyActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        supportFragmentManager
-            .beginTransaction()
-            .replace(
-                com.android.settingslib.collapsingtoolbar.R.id.content_frame,
-                DolbySettingsFragment(),
-                TAG,
-            )
-            .commit()
+        enableEdgeToEdge()
+        setContent {
+            val ctx = LocalContext.current
+            val colors =
+                if (isSystemInDarkTheme()) dynamicDarkColorScheme(ctx)
+                else dynamicLightColorScheme(ctx)
+            MaterialTheme(colorScheme = colors) { DolbyScreen() }
+        }
     }
 }
