@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2023-24 Paranoid Android
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+
+    <!-- Dolby Atmos -->
+    <string name="dolby_title">Dolby Atmos</string>
+    <string name="dolby_subtitle">Experience immersive audio</string>
+    <string name="dolby_enable">Use Dolby Atmos</string>
+    <string name="dolby_profile_title">Choose a profile</string>
+    <string name="dolby_preset">Graphic equalizer</string>
+    <string name="dolby_off">Off</string>
+    <string name="dolby_on">On</string>
+    <string name="dolby_unknown">Unknown</string>
+    <string name="dolby_on_with_profile">On (%1$s)</string>
+    <string name="dolby_bass_enhancer">Bass enhancer</string>
+    <string name="dolby_dialogue_enhancer">Dialogue enhancer</string>
+    <string name="dolby_spk_virtualizer">Speaker virtualization</string>
+    <string name="dolby_hp_virtualizer">Headphone virtualization</string>
+    <string name="dolby_volume_leveler">Volume leveler</string>
+    <string name="dolby_audio_tuning">Audio tuning</string>
+    <string name="dolby_surround_virtualizer">Surround virtualizer</string>
+    <string name="dolby_ieq_amount">Intensity</string>
+    <string name="dolby_virtual_bass">Virtual bass</string>
+    <string name="dolby_virtual_bass_desc">Simulates deep bass on small speakers and headphones</string>
+    <string name="dolby_reverb_reduction">Reverb reduction</string>
+    <string name="dolby_reverb_reduction_desc">Reduces echo and room reverb in recordings</string>
+    <string name="dolby_bass_enhancer_desc">Enhances low-frequency sounds for deeper bass</string>
+    <string name="dolby_dialogue_enhancer_desc">Brings voices forward so dialogue is easier to follow</string>
+    <string name="dolby_volume_leveler_desc">Balances volume for a consistent listening experience</string>
+    <string name="dolby_spk_virtualizer_desc">Widens the sound stage of the built-in speakers</string>
+    <string name="dolby_hp_virtualizer_desc">Widens the stereo image over headphones</string>
+    <string name="dolby_connect_headphones">Connect headphones</string>
+    <string name="dolby_switch_to_headset_hint">Switch Device Mode to Headset to adjust headphone settings</string>
+
+    <!-- OEM Device Mode Switch & Help -->
+    <string name="dolby_device_mode_title">Device mode</string>
+    <string name="dolby_device_phone">Phone</string>
+    <string name="dolby_device_headset">Headset</string>
+    <string name="dolby_device_mode_disable_text">Connect headphones to customize headset sound settings.</string>
+    <string name="dolby_learn_more">Learn more</string>
+    <string name="dolby_device_mode_help_title">Device Mode</string>
+    <string name="dolby_device_mode_help_desc">Dolby Atmos automatically detects whether you are listening through the phone speakers or a connected headset (wired, USB, or Bluetooth) and applies dedicated tuning for each port. You can also toggle between Phone and Headset modes to preview or adjust speaker settings at any time.</string>
+
+    <!-- OEM HDMI & Miracast Screens -->
+    <string name="dolby_hdmi_connected_title">HDMI Connected</string>
+    <string name="dolby_hdmi_connected_desc">Audio is currently routed to an external HDMI device. Dolby Atmos settings are managed by your external display or sound system.</string>
+    <string name="dolby_miracast_connected_title">Wireless Display Connected</string>
+    <string name="dolby_miracast_connected_desc">Audio is currently routed to a Miracast wireless display.</string>
+
+    <!-- Help & Explore Dialogs -->
+    <string name="dolby_help_title">Profile Features Help</string>
+    <string name="dolby_help_ieq_desc">Intelligent Equalizer dynamically adjusts the frequency balance of your audio to match your chosen tone (Detailed, Balanced, or Warm).</string>
+    <string name="dolby_help_stereo_widening_desc">Controls how wide the stereo soundstage feels when listening through headphones.</string>
+    <string name="dolby_help_reverb_reduction_desc">Suppresses room echo and reverberation so vocals and instruments sound cleaner.</string>
+    <string name="dolby_help_dialogue_enhancer_desc">Enhances speech frequencies so conversations in movies, podcasts, and videos are easier to hear.</string>
+    <string name="dolby_help_geq_desc">Manually fine-tune individual frequency bands or select a genre preset to shape the sound to your liking.</string>
+    <string name="dolby_explore_title">Explore Dolby Atmos</string>
+    <string name="dolby_explore_desc">Dolby Atmos moves audio around you in three-dimensional space, bringing entertainment to life all around you.</string>
+    <string name="dolby_learn_more_web">Learn more at dolby.com</string>
+    <string name="dolby_access_apps">Access Dolby enhanced apps</string>
+    <string name="dolby_reset_all">Reset all profiles</string>
+    <string name="dolby_reset_all_desc">Reset all profile settings to their factory defaults?</string>
+    <string name="dolby_more_options">More options</string>
+    <string name="dolby_reset_profile">Reset to defaults</string>
+    <string name="dolby_reset_profile_desc">Reset current profile settings to default values?</string>
+
+    <!-- Dolby profiles -->
+    <string name="dolby_profile_dynamic">Dynamic</string>
+    <string name="dolby_profile_video">Movie/Video</string>
+    <string name="dolby_profile_music">Music</string>
+    <string name="dolby_profile_custom">Custom</string>
+
+    <string name="dolby_preset_default">Flat (off)</string>
+    <string name="dolby_preset_rock">Rock</string>
+    <string name="dolby_preset_jazz">Jazz</string>
+    <string name="dolby_preset_pop">Pop</string>
+    <string name="dolby_preset_classical">Classical</string>
+    <string name="dolby_preset_hiphop">Hip Hop</string>
+    <string name="dolby_preset_blues">Blues</string>
+    <string name="dolby_preset_electronic">Electronic</string>
+    <string name="dolby_preset_metal">Metal</string>
+
+    <!-- Dolby equalizer UI -->
+    <string name="dolby_geq_slider_label_gain">Gain</string>
+    <string name="dolby_geq_preset">Preset</string>
+    <string name="dolby_geq_preset_name">Preset name</string>
+    <string name="dolby_geq_new_preset">New preset</string>
+    <string name="dolby_geq_rename_preset">Rename preset</string>
+    <string name="dolby_geq_delete_preset">Delete preset</string>
+    <string name="dolby_geq_delete_preset_prompt">Do you want to delete this preset?</string>
+    <string name="dolby_geq_reset_gains">Reset gains</string>
+    <string name="dolby_geq_reset_gains_prompt">Do you want to reset this preset to defaults?</string>
+    <string name="dolby_geq_preset_name_exists">Preset name already exists!</string>
+    <string name="dolby_geq_preset_name_too_long">Preset name is too long!</string>
+
+    <!-- Dolby intelligent EQ -->
+    <string name="dolby_ieq">Intelligent equalizer</string>
+    <string name="dolby_balanced">Balanced</string>
+    <string name="dolby_warm">Warm</string>
+    <string name="dolby_detailed">Detailed</string>
+
+    <!-- Tabs and profile flashcards -->
+    <string name="dolby_tab_home">Home</string>
+    <string name="dolby_tab_equalizer">Equalizer</string>
+    <string name="dolby_tab_advanced">Advanced</string>
+    <string name="dolby_profile_dynamic_desc">Automatically adapts the sound to whatever is playing, so you never have to switch by hand.</string>
+    <string name="dolby_profile_video_desc">Wide, immersive sound with clear dialogue, tuned for movies, series and video.</string>
+    <string name="dolby_profile_music_desc">Balanced, detailed sound with fuller bass and a spacious stage for music.</string>
+    <string name="dolby_profile_custom_desc">Your own mix. Fine-tune the equalizer and effects to taste.</string>
+    <string name="dolby_geq_view_bars">Sliders</string>
+    <string name="dolby_geq_view_curve">Curve</string>
+    <string name="dolby_geq_view">Equalizer view</string>
+    <string name="dolby_geq_band_config">Band configuration</string>
+    <string name="dolby_geq_band_config_desc">Choose equalizer precision: more bands = finer control</string>
+    <string name="dolby_geq_bands_count">%1$d bands</string>
+    <string name="dolby_geq_response_title">Interactive frequency response</string>
+    <string name="dolby_geq_response_desc_curve">Drag the control points to adjust gain (±%1$d dB) · %2$s - %3$s</string>
+    <string name="dolby_geq_response_desc_sliders">Move the sliders to adjust gain (±%1$d dB) · %2$s - %3$s</string>
+</resources>

@@ -25,6 +25,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     DolbyVisionParts
 
+# DolbyAtmos
+PRODUCT_PACKAGES += \
+    DolbyAtmos
+    
 # Properties
 PRODUCT_VENDOR_PROPERTIES += \
     ro.vendor.dolby.dax.version=DAX3_3.7.0.8_r1 \
