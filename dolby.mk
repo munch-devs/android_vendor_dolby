@@ -11,12 +11,15 @@ DOLBY_PATH := vendor/dolby
 # Configs
 PRODUCT_COPY_FILES += \
     $(DOLBY_PATH)/configs/dolby/dax-default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/dolby/dax-default.xml \
-    $(DOLBY_PATH)/configs/media/media_codecs_dolby_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_dolby_audio.xml
+    $(DOLBY_PATH)/configs/dolby/dolby_vision.cfg:$(TARGET_COPY_OUT_VENDOR)/etc/dolby_vision.cfg \
+    $(DOLBY_PATH)/configs/media/media_codecs_dolby_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_dolby_audio.xml \
+    $(DOLBY_PATH)/configs/media/media_codecs_dolby_vision.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_dolby_vision.xml
 
 #HIDL
 PRODUCT_PACKAGES += \
     vendor.dolby.hardware.dms.xml \
-    vendor.dolby.media.c2@1.0-service.xml
+    vendor.dolby.media.c2@1.0-service.xml \
+    vendor.dolby.media.dvs-service.xml
 
 # Properties
 PRODUCT_VENDOR_PROPERTIES += \
@@ -26,7 +29,8 @@ PRODUCT_VENDOR_PROPERTIES += \
 
 # Sepolicy
 BOARD_VENDOR_SEPOLICY_DIRS += \
-    $(DOLBY_PATH)/sepolicy/vendor
+    $(DOLBY_PATH)/sepolicy/vendor \
+    $(DOLBY_PATH)/sepolicy/vendor/vision
 
 # VINTF
 DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE += $(DOLBY_PATH)/configs/vintf/dolby_framework_matrix.xml

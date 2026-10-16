@@ -1,0 +1,16 @@
+# Vision
+vendor/bin/hw/dolbycodec2|807b8f8e6bb4e16d8b03df5a9069053f92f0c63a
+vendor/bin/hw/dvs-hal-service|2906e02ef0210bcdfc6ff8c9e85e457d637b0ae1
+vendor/etc/init/vendor.dolby.media.dvs-service-vision.rc|2ea3b75edba48954b27bc30957fc3b4c4a0bb76b
+vendor/etc/init/vendor.dolbyvision.media.c2@1.0-service.rc|1ea8b363e94fd4f5410cadceb30de8229fb38045
+vendor/lib64/c2.dolby.avc.dec.so|396224518d2ab5e052562a81505cdc2a5d901fac
+vendor/lib64/c2.dolby.avc.sec.dec.so|28cb8acefe600091c31467dedbe109e667b01750
+vendor/lib64/c2.dolby.client.so|df7192d7eb69fecee5a174b5e5cf0df0565328ad
+vendor/lib64/c2.dolby.egl.so|67448490cc0939bcd5c4530dba40a7b76ffb6f5a
+vendor/lib64/c2.dolby.hevc.dec.so|edc3d45977a7440a0af6d38ed39060779900e3ec
+vendor/lib64/c2.dolby.hevc.enc.so|362d2de15954e2cc053408aa33afba89eb20be3e
+vendor/lib64/c2.dolby.hevc.sec.dec.so|b018e77a92e7056b54a915ef1aff7202111b6205
+vendor/lib64/c2.dolby.store.so|36c70638a61fe8d260a3634f418423068b2b522c
+vendor/lib64/libdolbyottcameracontrol.so|8f4f31fff73dc00293104d5bcfc082ab7d654e5d
+vendor/lib64/libdolbyvision.so|14ae363abad76159414461ce8eeeb8109f8a3ba4
+vendor/lib64/vendor.dolby.dvs@1.0.so|c1aca6dc58ba2ddf954d752c796c23964bea2727
