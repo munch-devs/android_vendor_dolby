@@ -14,22 +14,46 @@ import android.util.Log;
 import android.view.Display;
 import android.view.Display.HdrCapabilities;
 
+import java.util.Arrays;
+
 public class BootCompletedReceiver extends BroadcastReceiver {
     private static final String TAG = "DoviParts";
     private static final boolean DEBUG = true;
 
     @Override
     public void onReceive(final Context context, Intent intent) {
-        if (!intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED)) {
+        if (intent == null || !Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             return;
         }
-        if (DEBUG)
+        if (DEBUG) {
             Log.d(TAG, "Received boot completed intent");
+        }
+
+        final DisplayManager displayManager = context.getSystemService(DisplayManager.class);
+        if (displayManager == null) {
+            return;
+        }
+
+        final Display display = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+        if (display == null) {
+            return;
+        }
+
+        final HdrCapabilities capabilities = display.getHdrCapabilities();
+        final int[] supportedTypes = (capabilities != null)
+                ? capabilities.getSupportedHdrTypes()
+                : new int[0];
+
+        for (int type : supportedTypes) {
+            if (type == HdrCapabilities.HDR_TYPE_DOLBY_VISION) {
+                return;
+            }
+        }
+
+        final int[] overrideTypes = Arrays.copyOf(supportedTypes, supportedTypes.length + 1);
+        overrideTypes[supportedTypes.length] = HdrCapabilities.HDR_TYPE_DOLBY_VISION;
 
         // Override HDR types to enable Dolby Vision
-        final DisplayManager displayManager = context.getSystemService(DisplayManager.class);
-        displayManager.overrideHdrTypes(Display.DEFAULT_DISPLAY,
-                new int[] {HdrCapabilities.HDR_TYPE_DOLBY_VISION, HdrCapabilities.HDR_TYPE_HDR10,
-                        HdrCapabilities.HDR_TYPE_HLG, HdrCapabilities.HDR_TYPE_HDR10_PLUS});
+        displayManager.overrideHdrTypes(Display.DEFAULT_DISPLAY, overrideTypes);
     }
 }
