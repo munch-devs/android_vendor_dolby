@@ -28,9 +28,7 @@ class DolbyConstants {
         REVERB_REDUCTION_AMOUNT(115),
         VOLUME_LEVELER_AMOUNT(116);
 
-        override fun toString(): String {
-            return "${name}(${id})"
-        }
+        override fun toString(): String = "${name}(${id})"
     }
 
     enum class DsTuning(val id: Int, val portName: String) {
@@ -42,10 +40,6 @@ class DolbyConstants {
         USB(5, "usb");
 
         override fun toString(): String = portName
-
-        companion object {
-            val PORT_IDS = entries.map { it.id }.toIntArray()
-        }
     }
 
     companion object {
@@ -87,7 +81,6 @@ class DolbyConstants {
         const val PREF_REVERB_ENABLE = "dolby_reverb_enable"
         const val PREF_VOLUME_AMOUNT = "dolby_volume_amount"
         const val PREF_REVERB = "dolby_reverb"
-        const val PREF_RESET = "dolby_reset"
 
         fun dlog(tag: String, msg: String) {
             if (Log.isLoggable(TAG, Log.DEBUG) || Log.isLoggable(tag, Log.DEBUG)) {

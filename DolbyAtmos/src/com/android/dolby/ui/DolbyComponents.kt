@@ -39,6 +39,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -137,108 +140,87 @@ internal fun DeviceModeSwitchCard(
     modifier: Modifier = Modifier,
 ) {
     val cs = MaterialTheme.colorScheme
-    val phoneColor =
-        when {
-            !enabled -> cs.onSurface.copy(alpha = 0.38f)
-            !headsetModeSelected -> cs.primary
-            else -> cs.onSurfaceVariant
-        }
-    val headsetColor =
-        when {
-            !enabled -> cs.onSurface.copy(alpha = 0.38f)
-            headsetModeSelected -> cs.primary
-            else -> cs.onSurfaceVariant
-        }
 
     SettingsCard(
         modifier = modifier,
         title = stringResource(R.string.dolby_device_mode_title),
         icon = if (headsetModeSelected) Icons.Default.Headphones else Icons.Default.PhoneAndroid,
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier =
-                    Modifier.clip(MaterialTheme.shapes.medium)
-                        .clickable(enabled = enabled) { onModeChange(false) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(Icons.Default.PhoneAndroid, contentDescription = null, tint = phoneColor)
-                Text(
-                    text = stringResource(R.string.dolby_device_phone),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (!headsetModeSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = phoneColor,
-                )
-            }
-
-            Switch(
-                checked = headsetModeSelected,
-                onCheckedChange = onModeChange,
-                enabled = enabled,
-            )
-
-            Row(
-                modifier =
-                    Modifier.clip(MaterialTheme.shapes.medium)
-                        .clickable(enabled = enabled) { onModeChange(true) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(Icons.Default.Headphones, contentDescription = null, tint = headsetColor)
-                Text(
-                    text = stringResource(R.string.dolby_device_headset),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (headsetModeSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = headsetColor,
-                )
-            }
-        }
-
-        AnimatedVisibility(visible = isMismatch) {
-            Column(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(MaterialTheme.shapes.large)
-                        .background(cs.surfaceContainerHighest)
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = !headsetModeSelected,
+                    onClick = { onModeChange(false) },
+                    enabled = enabled,
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    icon = {
+                        Icon(
+                            Icons.Default.PhoneAndroid,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
                 ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        tint = cs.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
+                    Text(stringResource(R.string.dolby_device_phone), maxLines = 1)
+                }
+                SegmentedButton(
+                    selected = headsetModeSelected,
+                    onClick = { onModeChange(true) },
+                    enabled = enabled,
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    icon = {
+                        Icon(
+                            Icons.Default.Headphones,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                ) {
+                    Text(stringResource(R.string.dolby_device_headset), maxLines = 1)
+                }
+            }
+
+            AnimatedVisibility(visible = isMismatch) {
+                Column(
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(MaterialTheme.shapes.large)
+                            .background(cs.surfaceContainerHighest)
+                            .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = cs.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.dolby_device_mode_disable_text),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (enabled) cs.onSurface else cs.onSurface.copy(alpha = 0.38f),
+                        )
+                    }
                     Text(
-                        text = stringResource(R.string.dolby_device_mode_disable_text),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (enabled) cs.onSurface else cs.onSurface.copy(alpha = 0.38f),
+                        text = stringResource(R.string.dolby_learn_more),
+                        style =
+                            MaterialTheme.typography.labelLarge.copy(
+                                textDecoration = TextDecoration.Underline
+                            ),
+                        color = if (enabled) cs.primary else cs.onSurface.copy(alpha = 0.38f),
+                        modifier =
+                            Modifier.align(Alignment.End)
+                                .clickable(enabled = enabled) { onLearnMoreClick() }
+                                .padding(top = 2.dp),
                     )
                 }
-                Text(
-                    text = stringResource(R.string.dolby_learn_more),
-                    style =
-                        MaterialTheme.typography.labelLarge.copy(
-                            textDecoration = TextDecoration.Underline
-                        ),
-                    color = if (enabled) cs.primary else cs.onSurface.copy(alpha = 0.38f),
-                    modifier =
-                        Modifier.align(Alignment.End)
-                            .clickable(enabled = enabled) { onLearnMoreClick() }
-                            .padding(top = 4.dp),
-                )
             }
         }
     }

@@ -100,6 +100,7 @@ import com.android.dolby.DolbyConstants.DsTuning
 import com.android.dolby.R
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 
@@ -107,7 +108,6 @@ import kotlin.math.sin
 internal data class DolbyActions(
     val onEnabledChange: (Boolean) -> Unit = {},
     val onProfileChange: (Int) -> Unit = {},
-    val onDeviceModeChange: (Boolean) -> Unit = {},
     val onIeqChange: (Int) -> Unit = {},
     val onIeqAmountChange: (Int) -> Unit = {},
     val onDialogueEnabledChange: (Boolean) -> Unit = {},
@@ -121,6 +121,7 @@ internal data class DolbyActions(
     val onVolumeAmountChange: (Int) -> Unit = {},
     val onReverbEnabledChange: (Boolean) -> Unit = {},
     val onReverbChange: (Int) -> Unit = {},
+    val onGeqBandChange: (Int, Float) -> Unit = { _, _ -> },
     val onReset: () -> Unit = {},
     val onResetAll: () -> Unit = {},
 )
@@ -146,7 +147,6 @@ private enum class ModalDialog {
     RESET_PROFILE,
     RESET_ALL,
     PROFILE_HELP,
-    DEVICE_MODE_HELP,
     EXPLORE_DOLBY,
 }
 
@@ -171,7 +171,7 @@ internal fun DolbyScreen(
     val heroSummary =
         when {
             !state.dsOn -> stringResource(R.string.dolby_off)
-            profileName.isNotEmpty() -> stringResource(R.string.dolby_on_with_profile, profileName)
+            profileName.isNotEmpty() -> stringResource(R.string.dolby_on_with_profile_and_device, profileName, state.activeDeviceName)
             else -> stringResource(R.string.dolby_on)
         }
     val canReset = state.dsOn && state.profile != -1 && !state.isExternalDisplayAudio
@@ -188,9 +188,9 @@ internal fun DolbyScreen(
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            stringResource(R.string.dolby_subtitle),
+                            state.activeDeviceName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.primary,
                         )
                     }
                 },
@@ -308,7 +308,6 @@ internal fun DolbyScreen(
                                 heroSummary = heroSummary,
                                 contentAlpha = contentAlpha,
                                 actions = actions,
-                                onLearnMoreClick = { modalDialog = ModalDialog.DEVICE_MODE_HELP },
                             )
                         TAB_EQUALIZER ->
                             Column(
@@ -323,7 +322,6 @@ internal fun DolbyScreen(
                                     enabled = canReset,
                                     stereoSupported = stereoSupported,
                                     actions = actions,
-                                    onLearnMoreClick = { modalDialog = ModalDialog.DEVICE_MODE_HELP },
                                 )
                             }
                     }
@@ -354,18 +352,6 @@ internal fun DolbyScreen(
                     modalDialog = null
                 },
                 onDismiss = { modalDialog = null },
-            )
-        ModalDialog.DEVICE_MODE_HELP ->
-            AlertDialog(
-                onDismissRequest = { modalDialog = null },
-                icon = { Icon(Icons.Default.Headphones, contentDescription = null) },
-                title = { Text(stringResource(R.string.dolby_device_mode_help_title)) },
-                text = { Text(stringResource(R.string.dolby_device_mode_help_desc)) },
-                confirmButton = {
-                    TextButton(onClick = { modalDialog = null }) {
-                        Text(stringResource(android.R.string.ok))
-                    }
-                },
             )
         ModalDialog.PROFILE_HELP ->
             ProfileHelpDialog(
@@ -417,10 +403,7 @@ internal fun DolbyScreen(
 }
 
 @Composable
-private fun ProfileHelpDialog(
-    profile: Int,
-    onDismiss: () -> Unit,
-) {
+private fun ProfileHelpDialog(profile: Int, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.HelpOutline, contentDescription = null) },
@@ -465,9 +448,7 @@ private fun ProfileHelpDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(android.R.string.ok))
-            }
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.ok)) }
         },
     )
 }
@@ -490,11 +471,7 @@ private fun HelpSection(title: String, body: String) {
 }
 
 @Composable
-private fun Page(
-    bottomPadding: Dp,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
+private fun Page(bottomPadding: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
         modifier
             .fillMaxSize()
@@ -513,7 +490,6 @@ private fun HomePage(
     heroSummary: String,
     contentAlpha: Float,
     actions: DolbyActions,
-    onLearnMoreClick: () -> Unit,
 ) {
     val ieq = rememberChoices(R.array.dolby_ieq_entries, R.array.dolby_ieq_values)
     Column(Modifier.padding(horizontal = 16.dp)) {
@@ -534,42 +510,31 @@ private fun HomePage(
             }
         }
         Column(Modifier.padding(horizontal = 16.dp)) {
-            DeviceModeSwitchCard(
-                headsetModeSelected = state.headsetModeSelected,
-                isMismatch = state.isDeviceModeMismatch,
-                enabled = enabled,
-                onModeChange = actions.onDeviceModeChange,
-                onLearnMoreClick = onLearnMoreClick,
-            )
-        }
-        AnimatedVisibility(visible = !state.isDeviceModeMismatch) {
-            Column(Modifier.padding(horizontal = 16.dp)) {
-                SettingsCard(title = stringResource(R.string.dolby_ieq), icon = Icons.Default.GraphicEq) {
-                    Row(
-                        Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        repeat(ieq.size) { i ->
-                            OptionTile(
-                                label = ieq.labels[i],
-                                icon = ieqIcon(ieq.values[i]),
-                                selected = ieq.values[i] == state.ieq,
-                                enabled = enabled,
-                                onClick = { actions.onIeqChange(ieq.values[i]) },
-                                modifier = Modifier.weight(1f),
-                                iconSize = 32.dp,
-                            )
-                        }
+            SettingsCard(title = stringResource(R.string.dolby_ieq), icon = Icons.Default.GraphicEq) {
+                Row(
+                    Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    repeat(ieq.size) { i ->
+                        OptionTile(
+                            label = ieq.labels[i],
+                            icon = ieqIcon(ieq.values[i]),
+                            selected = ieq.values[i] == state.ieq,
+                            enabled = enabled,
+                            onClick = { actions.onIeqChange(ieq.values[i]) },
+                            modifier = Modifier.weight(1f),
+                            iconSize = 32.dp,
+                        )
                     }
-                    IntSliderRow(
-                        title = stringResource(R.string.dolby_ieq_amount),
-                        value = state.ieqAmount,
-                        range = IEQ_RANGE,
-                        enabled = enabled && state.ieq != 0,
-                        onSelect = actions.onIeqAmountChange,
-                        icon = Icons.Default.Tune,
-                    )
                 }
+                IntSliderRow(
+                    title = stringResource(R.string.dolby_ieq_amount),
+                    value = state.ieqAmount,
+                    range = IEQ_RANGE,
+                    enabled = enabled && state.ieq != 0,
+                    onSelect = actions.onIeqAmountChange,
+                    icon = Icons.Default.Tune,
+                )
             }
         }
     }
@@ -596,7 +561,7 @@ private fun HeroCard(on: Boolean, summary: String, onChange: (Boolean) -> Unit) 
                 primary = colors.primary,
                 secondary = colors.tertiary,
                 active = on,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 20.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 24.dp),
             )
         }
         ListItem(
@@ -611,7 +576,7 @@ private fun HeroCard(on: Boolean, summary: String, onChange: (Boolean) -> Unit) 
     }
 }
 
-private const val WAVE_BARS = 47
+private const val WAVE_BARS = 40
 private val TWO_PI = (2 * PI).toFloat()
 
 @Composable
@@ -629,7 +594,7 @@ private fun Waveform(
                     targetValue = TWO_PI,
                     animationSpec =
                         infiniteRepeatable(
-                            animation = tween(durationMillis = 3000, easing = LinearEasing),
+                            animation = tween(durationMillis = 2600, easing = LinearEasing),
                             repeatMode = RepeatMode.Restart,
                         ),
                     label = "waveformPhase",
@@ -639,43 +604,53 @@ private fun Waveform(
         }
     val amplitude =
         animateFloatAsState(
-            targetValue = if (active) 1f else 0.16f,
-            animationSpec = tween(durationMillis = 600),
+            targetValue = if (active) 1f else 0.12f,
+            animationSpec = tween(durationMillis = 500),
             label = "waveformAmplitude",
         )
 
     Canvas(modifier) {
         val shift = phase.value
         val gain = amplitude.value
-        val mid = (WAVE_BARS - 1) / 2f
         val step = size.width / WAVE_BARS
-        val stroke = (step * 0.5f).coerceAtLeast(2.dp.toPx())
+        val stroke = (step * 0.52f).coerceAtLeast(2.5.dp.toPx())
         val brush =
             Brush.horizontalGradient(
                 colors = listOf(primary, secondary, primary),
                 startX = 0f,
                 endX = size.width,
             )
+
         for (i in 0 until WAVE_BARS) {
-            val distance = abs(i - mid) / mid
-            val envelope = (1f - distance).pow(1.3f)
-            val ripple =
-                0.62f * wave(shift - distance * 7f) + 0.38f * wave(2f * shift - distance * 11f)
-            val height = size.height * (0.05f + 0.95f * gain * envelope * (0.22f + 0.78f * ripple))
+            val u = i.toFloat() / (WAVE_BARS - 1)
+            val edgeTaper = 0.15f
+            val window =
+                when {
+                    u < edgeTaper -> 0.5f * (1f - cos(PI.toFloat() * u / edgeTaper))
+                    u > 1f - edgeTaper -> 0.5f * (1f - cos(PI.toFloat() * (1f - u) / edgeTaper))
+                    else -> 1f
+                }
+
+            val w1 = 0.5f + 0.5f * sin(shift + i * 0.45f)
+            val w2 = 0.5f + 0.5f * cos(shift * 2f - i * 0.28f)
+            val w3 = 0.5f + 0.5f * sin(shift * 3f + i * 0.72f)
+            val ripple = 0.45f * w1 + 0.35f * w2 + 0.20f * w3
+
+            val normalizedHeight = 0.14f + 0.72f * gain * (0.35f + 0.65f * window) * (0.28f + 0.72f * ripple)
+            val barHeight = (size.height * normalizedHeight).coerceIn(stroke, size.height)
             val x = step * (i + 0.5f)
+
             drawLine(
                 brush = brush,
-                start = Offset(x, (size.height - height) / 2f),
-                end = Offset(x, (size.height + height) / 2f),
+                start = Offset(x, (size.height - barHeight) / 2f),
+                end = Offset(x, (size.height + barHeight) / 2f),
                 strokeWidth = stroke,
                 cap = StrokeCap.Round,
-                alpha = 0.35f + 0.65f * envelope,
+                alpha = 0.55f + 0.45f * window,
             )
         }
     }
 }
-
-private fun wave(angle: Float) = 0.5f + 0.5f * sin(angle)
 
 @Composable
 private fun AdvancedPage(
@@ -683,25 +658,13 @@ private fun AdvancedPage(
     enabled: Boolean,
     stereoSupported: Boolean,
     actions: DolbyActions,
-    onLearnMoreClick: () -> Unit,
 ) {
-    val headphonesEditable = enabled && state.headsetModeSelected && !state.isDeviceModeMismatch
-    val headphonesHint =
-        when {
-            !state.headsetModeSelected -> stringResource(R.string.dolby_switch_to_headset_hint)
-            state.isDeviceModeMismatch -> stringResource(R.string.dolby_connect_headphones)
-            else -> null
-        }
+    val headphonesEditable = enabled && state.isHeadsetConnected
+    val hpDescription =
+        if (state.isHeadsetConnected) stringResource(R.string.dolby_hp_virtualizer_desc)
+        else stringResource(R.string.dolby_connect_headphones)
 
     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        DeviceModeSwitchCard(
-            headsetModeSelected = state.headsetModeSelected,
-            isMismatch = state.isDeviceModeMismatch,
-            enabled = enabled,
-            onModeChange = actions.onDeviceModeChange,
-            onLearnMoreClick = onLearnMoreClick,
-        )
-
         SettingsCard(
             title = stringResource(R.string.dolby_surround_virtualizer),
             icon = Icons.Default.Headphones,
@@ -710,13 +673,12 @@ private fun AdvancedPage(
                 SwitchRow(
                     R.string.dolby_spk_virtualizer,
                     state.spkVirt,
-                    enabled && !state.headsetModeSelected,
+                    enabled && !state.isHeadsetConnected,
                     stringResource(R.string.dolby_spk_virtualizer_desc),
                     actions.onSpkVirtChange,
                     icon = Icons.Default.Speaker,
                 )
             }
-            val hpDescription = headphonesHint ?: stringResource(R.string.dolby_hp_virtualizer_desc)
             if (stereoSupported) {
                 ToggleSliderRow(
                     title = R.string.dolby_hp_virtualizer,
@@ -769,26 +731,6 @@ private fun AdvancedPage(
                 onValueChange = actions.onDialogueChange,
                 icon = Icons.Default.RecordVoiceOver,
             )
-        }
-
-        SettingsCard(title = stringResource(R.string.dolby_volume_leveler), icon = Icons.Default.VolumeUp) {
-            ToggleSliderRow(
-                title = R.string.dolby_volume_leveler,
-                checked = state.volume,
-                value = state.volumeAmount,
-                range = VOLUME_RANGE,
-                enabled = enabled,
-                supporting = stringResource(R.string.dolby_volume_leveler_desc),
-                onCheckedChange = actions.onVolumeChange,
-                onValueChange = actions.onVolumeAmountChange,
-                icon = Icons.Default.BarChart,
-            )
-        }
-
-        SettingsCard(
-            title = stringResource(R.string.dolby_reverb_reduction),
-            icon = Icons.Default.BlurOff,
-        ) {
             ToggleSliderRow(
                 title = R.string.dolby_reverb_reduction,
                 checked = state.reverbOn,
@@ -799,6 +741,20 @@ private fun AdvancedPage(
                 onCheckedChange = actions.onReverbEnabledChange,
                 onValueChange = actions.onReverbChange,
                 icon = Icons.Default.BlurOff,
+            )
+        }
+
+        SettingsCard(title = stringResource(R.string.dolby_volume_leveler), icon = Icons.Default.VolumeUp) {
+            ToggleSliderRow(
+                title = stringResource(R.string.dolby_volume_leveler),
+                checked = state.volume,
+                value = state.volumeAmount,
+                range = VOLUME_RANGE,
+                enabled = enabled,
+                supporting = stringResource(R.string.dolby_volume_leveler_desc),
+                onCheckedChange = actions.onVolumeChange,
+                onValueChange = actions.onVolumeAmountChange,
+                icon = Icons.Default.BarChart,
             )
         }
     }

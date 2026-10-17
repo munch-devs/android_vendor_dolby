@@ -17,43 +17,81 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+data class AudioDeviceState(
+    val port: Int,
+    val deviceKey: String,
+    val deviceName: String,
+)
+
 internal class AudioOutputMonitor(context: Context) {
 
     private val audioManager = context.getSystemService(AudioManager::class.java)!!
 
-    fun currentPort(): Int {
+    fun currentDeviceState(): AudioDeviceState {
         val device = audioManager.getDevicesForAttributes(MEDIA_ATTRS).firstOrNull()
+        val name = device?.productName?.toString().takeUnless { it.isNullOrBlank() }
+
         return when (device?.type) {
             AudioDeviceInfo.TYPE_WIRED_HEADSET,
-            AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> DsTuning.HEADPHONE.id
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> AudioDeviceState(
+                port = DsTuning.HEADPHONE.id,
+                deviceKey = "headphone_35mm",
+                deviceName = name ?: "Wired Headphones"
+            )
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_BLE_HEADSET,
-            AudioDeviceInfo.TYPE_BLE_SPEAKER -> DsTuning.BLUETOOTH.id
+            AudioDeviceInfo.TYPE_BLE_SPEAKER -> {
+                val addr = device.address.takeIf { !it.isNullOrBlank() } ?: "generic_bt"
+                AudioDeviceState(
+                    port = DsTuning.BLUETOOTH.id,
+                    deviceKey = "bt_$addr",
+                    deviceName = name ?: "Bluetooth Audio"
+                )
+            }
             AudioDeviceInfo.TYPE_USB_DEVICE,
             AudioDeviceInfo.TYPE_USB_HEADSET,
-            AudioDeviceInfo.TYPE_USB_ACCESSORY -> DsTuning.USB.id
+            AudioDeviceInfo.TYPE_USB_ACCESSORY -> {
+                val idStr = name?.replace("\\s+".toRegex(), "_") ?: "generic_usb"
+                AudioDeviceState(
+                    port = DsTuning.USB.id,
+                    deviceKey = "usb_$idStr",
+                    deviceName = name ?: "USB Audio Device"
+                )
+            }
             AudioDeviceInfo.TYPE_HDMI,
             AudioDeviceInfo.TYPE_HDMI_ARC,
-            AudioDeviceInfo.TYPE_HDMI_EARC -> DsTuning.HDMI.id
-            AudioDeviceInfo.TYPE_REMOTE_SUBMIX -> DsTuning.MIRACAST.id
-            else -> DsTuning.INTERNAL_SPEAKER.id
+            AudioDeviceInfo.TYPE_HDMI_EARC -> AudioDeviceState(
+                port = DsTuning.HDMI.id,
+                deviceKey = "hdmi_display",
+                deviceName = name ?: "HDMI Audio"
+            )
+            AudioDeviceInfo.TYPE_REMOTE_SUBMIX -> AudioDeviceState(
+                port = DsTuning.MIRACAST.id,
+                deviceKey = "miracast_display",
+                deviceName = name ?: "Wireless Display"
+            )
+            else -> AudioDeviceState(
+                port = DsTuning.INTERNAL_SPEAKER.id,
+                deviceKey = "speaker",
+                deviceName = name ?: "Phone Speaker"
+            )
         }
     }
 
-    val activePort: Flow<Int> =
+    val activeDevice: Flow<AudioDeviceState> =
         callbackFlow {
                 val callback =
                     object : AudioDeviceCallback() {
                         override fun onAudioDevicesAdded(devices: Array<AudioDeviceInfo>) {
-                            trySend(currentPort())
+                            trySend(currentDeviceState())
                         }
 
                         override fun onAudioDevicesRemoved(devices: Array<AudioDeviceInfo>) {
-                            trySend(currentPort())
+                            trySend(currentDeviceState())
                         }
                     }
                 audioManager.registerAudioDeviceCallback(callback, null)
-                trySend(currentPort())
+                trySend(currentDeviceState())
                 awaitClose { audioManager.unregisterAudioDeviceCallback(callback) }
             }
             .distinctUntilChanged()

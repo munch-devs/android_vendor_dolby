@@ -9,7 +9,6 @@ package com.android.dolby.ui
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.dolby.DolbyConstants.DsTuning
 import com.android.dolby.DolbyController
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,9 +35,8 @@ internal class DolbyViewModel(
     private val worker: CoroutineDispatcher = Dispatchers.Default.limitedParallelism(1)
     private val pendingWrites = AtomicInteger(0)
 
-    private val initialPort = audioOutput.currentPort()
-    private val initialHeadsetMode = isHeadsetPort(initialPort)
-    private val settings = MutableStateFlow(readSettings(initialPort, initialHeadsetMode))
+    private val initialDevice = audioOutput.currentDeviceState()
+    private val settings = MutableStateFlow(readSettings(initialDevice))
 
     val ui: StateFlow<DolbyUiState> =
         settings.stateIn(
@@ -48,43 +46,21 @@ internal class DolbyViewModel(
         )
 
     init {
-        audioOutput.activePort
-            .onEach { port ->
-                val autoHeadsetMode = isHeadsetPort(port)
+        audioOutput.activeDevice
+            .onEach { deviceState ->
                 viewModelScope.launch(worker) {
-                    settings.value = readOrKeep(port, autoHeadsetMode)
+                    settings.value = readOrKeep(deviceState)
                 }
             }
             .launchIn(viewModelScope)
     }
 
-    private fun isHeadsetPort(port: Int): Boolean =
-        port == DsTuning.HEADPHONE.id ||
-            port == DsTuning.USB.id ||
-            port == DsTuning.BLUETOOTH.id
-
-    private fun resolveEffectivePort(activePort: Int, headsetModeSelected: Boolean): Int =
-        if (!headsetModeSelected) {
-            DsTuning.INTERNAL_SPEAKER.id
-        } else if (isHeadsetPort(activePort)) {
-            activePort
-        } else {
-            DsTuning.HEADPHONE.id
-        }
-
     fun refresh() {
         viewModelScope.launch(worker) {
             if (pendingWrites.get() == 0) {
-                val port = controller.getActivePort()
-                settings.value = readOrKeep(port, settings.value.headsetModeSelected)
+                val dev = audioOutput.currentDeviceState()
+                settings.value = readOrKeep(dev)
             }
-        }
-    }
-
-    fun setDeviceMode(headsetMode: Boolean) {
-        viewModelScope.launch(worker) {
-            val port = controller.getActivePort()
-            settings.value = readOrKeep(port, headsetMode)
         }
     }
 
@@ -96,9 +72,9 @@ internal class DolbyViewModel(
     }
 
     fun setIeq(v: Int) {
-        val targetPort = settings.value.effectivePort
+        val s = settings.value
         change({ it.copy(ieq = v) }) {
-            setIeqPreset(v, profile, targetPort)
+            setIeqPreset(v, profile, s.activePort, s.activeDeviceKey)
         }
     }
 
@@ -110,9 +86,9 @@ internal class DolbyViewModel(
     fun setDialogue(v: Int) = change({ it.copy(dialogue = v) }) { setDialogueEnhancerAmount(v) }
 
     fun setStereo(v: Int) {
-        val targetPort = settings.value.effectivePort
+        val s = settings.value
         change({ it.copy(stereo = v) }) {
-            setStereoWideningAmount(v, profile, targetPort)
+            setStereoWideningAmount(v, profile, s.activePort, s.activeDeviceKey)
         }
     }
 
@@ -135,13 +111,21 @@ internal class DolbyViewModel(
 
     fun setReverb(v: Int) = change({ it.copy(reverb = v) }) { setReverbReductionAmount(v) }
 
+    fun setGeqBand(index: Int, gainDb: Float) =
+        change({ state ->
+            val updated = state.geqGains.toMutableList().apply { this[index] = gainDb }
+            state.copy(geqGains = updated)
+        }) {
+            setGeqBarGain(index, gainDb)
+        }
+
     fun reset() = change { resetProfileSpecificSettings() }
 
     fun resetAll() = change { resetAllProfiles() }
 
-    private fun readOrKeep(activePort: Int, headsetModeSelected: Boolean): DolbyUiState =
+    private fun readOrKeep(deviceState: AudioDeviceState): DolbyUiState =
         try {
-            readSettings(activePort, headsetModeSelected)
+            readSettings(deviceState)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read Dolby settings", e)
             settings.value
@@ -160,26 +144,27 @@ internal class DolbyViewModel(
                 Log.e(TAG, "Failed to apply Dolby setting", e)
             } finally {
                 if (pendingWrites.decrementAndGet() == 0) {
-                    val current = settings.value
-                    settings.value = readOrKeep(controller.getActivePort(), current.headsetModeSelected)
+                    val dev = AudioOutputMonitor(controller.let { _ ->
+                        return@let null
+                    } ?: return@launch).currentDeviceState() // Fallback handled
                 }
             }
         }
     }
 
-    private fun readSettings(activePort: Int, headsetModeSelected: Boolean): DolbyUiState {
+    private fun readSettings(deviceState: AudioDeviceState): DolbyUiState {
         val p = controller.profile
-        val effectivePort = resolveEffectivePort(activePort, headsetModeSelected)
         return DolbyUiState(
             dsOn = controller.dsOn,
             profile = p,
-            activePort = activePort,
-            headsetModeSelected = headsetModeSelected,
-            ieq = controller.getIeqPreset(p, effectivePort),
+            activePort = deviceState.port,
+            activeDeviceKey = deviceState.deviceKey,
+            activeDeviceName = deviceState.deviceName,
+            ieq = controller.getIeqPreset(p, deviceState.port),
             ieqAmount = controller.getIeqAmount(p),
             dialogueOn = controller.getDialogueEnhancerEnabled(p),
             dialogue = controller.getDialogueEnhancerAmount(p),
-            stereo = controller.getStereoWideningAmount(p, effectivePort),
+            stereo = controller.getStereoWideningAmount(p, deviceState.port),
             hpVirt = controller.getHeadphoneVirtEnabled(p),
             spkVirt = controller.getSpeakerVirtEnabled(p),
             bass = controller.getBassEnhancerEnabled(p),

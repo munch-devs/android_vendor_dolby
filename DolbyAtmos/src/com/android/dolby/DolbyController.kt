@@ -46,7 +46,7 @@ internal class DolbyController private constructor(private val context: Context)
 
     private val audioDeviceCallback =
         object : AudioDeviceCallback() {
-            override fun onAudioDevicesAdded(addedDevices: Array<AudioDeviceInfo>) {
+            override fun onAudioDevicesAdded(devices: Array<AudioDeviceInfo>) {
                 dlog(TAG, "onAudioDevicesAdded")
                 setCurrentProfile()
             }
@@ -130,6 +130,26 @@ internal class DolbyController private constructor(private val context: Context)
         }
     }
 
+    fun getActiveDeviceKey(): String {
+        val device = audioManager.getDevicesForAttributes(MEDIA_ATTRS).firstOrNull()
+        val name = device?.productName?.toString()
+        return when (device?.type) {
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "headphone_35mm"
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_BLE_HEADSET,
+            AudioDeviceInfo.TYPE_BLE_SPEAKER -> "bt_${device.address ?: "generic"}"
+            AudioDeviceInfo.TYPE_USB_DEVICE,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+            AudioDeviceInfo.TYPE_USB_ACCESSORY -> "usb_${name?.replace("\\s+".toRegex(), "_") ?: "generic"}"
+            AudioDeviceInfo.TYPE_HDMI,
+            AudioDeviceInfo.TYPE_HDMI_ARC,
+            AudioDeviceInfo.TYPE_HDMI_EARC -> "hdmi_display"
+            AudioDeviceInfo.TYPE_REMOTE_SUBMIX -> "miracast_display"
+            else -> "speaker"
+        }
+    }
+
     fun onBootCompleted() {
         dlog(TAG, "onBootCompleted")
         restoreAll()
@@ -162,33 +182,28 @@ internal class DolbyController private constructor(private val context: Context)
         val prefs = profilePrefs(profile)
         setPreset(prefs.getString(DolbyConstants.PREF_PRESET, getPreset(profile))!!, profile)
 
-        for (port in DsTuning.PORT_IDS) {
-            val ieqKey = "${DolbyConstants.PREF_IEQ}_port_$port"
-            val savedIeq =
-                prefs.getString(ieqKey, prefs.getString(DolbyConstants.PREF_IEQ, null))
-                    ?.toIntOrNull()
-                    ?: getIeqPreset(profile, port)
-            guarded {
-                setIeqPreset(savedIeq, profile, port, persist = false)
-            }
+        val activePort = getActivePort()
+        val deviceKey = getActiveDeviceKey()
 
-            if (stereoWideningSupported) {
-                val stereoKey = "${DolbyConstants.PREF_STEREO}_port_$port"
-                val savedStereo =
-                    prefs.getString(stereoKey, prefs.getString(DolbyConstants.PREF_STEREO, null))
-                        ?.toIntOrNull()
-                        ?: getStereoWideningAmount(profile, port)
-                guarded {
-                    setStereoWideningAmount(savedStereo, profile, port, persist = false)
-                }
-            }
+        val ieqKey = "${DolbyConstants.PREF_IEQ}_device_$deviceKey"
+        val savedIeq =
+            prefs.getString(ieqKey, prefs.getString(DolbyConstants.PREF_IEQ, null))
+                ?.toIntOrNull()
+                ?: getIeqPreset(profile, activePort)
+        guarded { setIeqPreset(savedIeq, profile, activePort, persist = false) }
+
+        if (stereoWideningSupported) {
+            val stereoKey = "${DolbyConstants.PREF_STEREO}_device_$deviceKey"
+            val savedStereo =
+                prefs.getString(stereoKey, prefs.getString(DolbyConstants.PREF_STEREO, null))
+                    ?.toIntOrNull()
+                    ?: getStereoWideningAmount(profile, activePort)
+            guarded { setStereoWideningAmount(savedStereo, profile, activePort, persist = false) }
         }
 
         guarded {
             setIeqAmount(
-                prefs
-                    .getString(DolbyConstants.PREF_IEQ_AMOUNT, getIeqAmount(profile).toString())!!
-                    .toInt(),
+                prefs.getString(DolbyConstants.PREF_IEQ_AMOUNT, getIeqAmount(profile).toString())!!.toInt(),
                 profile,
                 persist = false,
             )
@@ -206,21 +221,12 @@ internal class DolbyController private constructor(private val context: Context)
             )
         }
         setDialogueEnhancerAmount(
-            savedAmount(
-                prefs,
-                DolbyConstants.PREF_DIALOGUE,
-                getDialogueEnhancerAmount(profile),
-            ),
+            savedAmount(prefs, DolbyConstants.PREF_DIALOGUE, getDialogueEnhancerAmount(profile)),
             profile,
             persist = false,
         )
         setDialogueEnhancerEnabled(
-            savedEnabled(
-                prefs,
-                DolbyConstants.PREF_DIALOGUE_ENABLE,
-                DolbyConstants.PREF_DIALOGUE,
-                getDialogueEnhancerEnabled(profile),
-            ),
+            savedEnabled(prefs, DolbyConstants.PREF_DIALOGUE_ENABLE, DolbyConstants.PREF_DIALOGUE, getDialogueEnhancerEnabled(profile)),
             profile,
             persist = false,
         )
@@ -243,33 +249,19 @@ internal class DolbyController private constructor(private val context: Context)
         )
         guarded {
             setVolumeLevelerAmount(
-                prefs
-                    .getString(
-                        DolbyConstants.PREF_VOLUME_AMOUNT,
-                        getVolumeLevelerAmount(profile).toString(),
-                    )!!
-                    .toInt(),
+                prefs.getString(DolbyConstants.PREF_VOLUME_AMOUNT, getVolumeLevelerAmount(profile).toString())!!.toInt(),
                 profile,
                 persist = false,
             )
         }
         guarded {
             setReverbReductionAmount(
-                savedAmount(
-                    prefs,
-                    DolbyConstants.PREF_REVERB,
-                    getReverbReductionAmount(profile),
-                ),
+                savedAmount(prefs, DolbyConstants.PREF_REVERB, getReverbReductionAmount(profile)),
                 profile,
                 persist = false,
             )
             setReverbReductionEnabled(
-                savedEnabled(
-                    prefs,
-                    DolbyConstants.PREF_REVERB_ENABLE,
-                    DolbyConstants.PREF_REVERB,
-                    getReverbReductionEnabled(profile),
-                ),
+                savedEnabled(prefs, DolbyConstants.PREF_REVERB_ENABLE, DolbyConstants.PREF_REVERB, getReverbReductionEnabled(profile)),
                 profile,
                 persist = false,
             )
@@ -322,7 +314,6 @@ internal class DolbyController private constructor(private val context: Context)
     }
 
     private fun setCurrentProfile() {
-        dlog(TAG, "setCurrentProfile")
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val saved = prefs.getString(DolbyConstants.PREF_PROFILE, "0")!!.toInt()
         profile = if (isProfileSupported(saved)) saved else 0
@@ -340,13 +331,11 @@ internal class DolbyController private constructor(private val context: Context)
         val p = profile.toString()
         val profiles = context.resources.getStringArray(R.array.dolby_profile_values)
         val profileIndex = profiles.indexOf(p)
-        dlog(TAG, "getProfileName: profile=$p index=$profileIndex")
         return if (profileIndex == -1) null
         else context.resources.getStringArray(R.array.dolby_profile_entries)[profileIndex]
     }
 
     fun resetProfileSpecificSettings() {
-        dlog(TAG, "resetProfileSpecificSettings")
         checkEffect()
         dolbyEffect.resetProfileSpecificSettings()
         context.deleteSharedPreferences("profile_$profile")
@@ -359,7 +348,6 @@ internal class DolbyController private constructor(private val context: Context)
         readOr(false) { dolbyEffect.isProfileSpecificSettingsModified(profile) }
 
     fun resetAllProfiles() {
-        dlog(TAG, "resetAllProfiles")
         checkEffect()
         context.resources
             .getStringArray(R.array.dolby_profile_values)
@@ -375,11 +363,10 @@ internal class DolbyController private constructor(private val context: Context)
 
     fun getPreset(profile: Int = this.profile): String {
         val gains = readOr(IntArray(20)) { dolbyEffect.getDapParameter(DsParam.GEQ_BAND_GAINS, profile) }
-        return gains.joinToString(separator = ",").also { dlog(TAG, "getPreset: $it") }
+        return gains.joinToString(separator = ",")
     }
 
     fun setPreset(value: String, profile: Int = this.profile) {
-        dlog(TAG, "setPreset: $value")
         checkEffect()
         val gains = value.split(",").map { it.toInt() }.toIntArray()
         dolbyEffect.setDapParameter(DsParam.GEQ_BAND_GAINS, gains, profile)
@@ -388,69 +375,50 @@ internal class DolbyController private constructor(private val context: Context)
     fun getPresetName(): String {
         val presets = context.resources.getStringArray(R.array.dolby_preset_values)
         val presetIndex = presets.indexOf(getPreset())
-        return if (presetIndex == -1) {
-            "Custom"
-        } else {
-            context.resources.getStringArray(R.array.dolby_preset_entries)[presetIndex]
-        }
+        return if (presetIndex == -1) "Custom" else context.resources.getStringArray(R.array.dolby_preset_entries)[presetIndex]
     }
 
     fun getHeadphoneVirtEnabled(profile: Int = this.profile) =
-        readOr(false) {
-            dolbyEffect.getDapParameterBool(DsParam.HEADPHONE_VIRTUALIZER, profile)
-        }.also { dlog(TAG, "getHeadphoneVirtEnabled: $it") }
+        readOr(false) { dolbyEffect.getDapParameterBool(DsParam.HEADPHONE_VIRTUALIZER, profile) }
 
     fun setHeadphoneVirtEnabled(value: Boolean, profile: Int = this.profile, persist: Boolean = true) {
-        dlog(TAG, "setHeadphoneVirtEnabled: $value")
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.HEADPHONE_VIRTUALIZER, value, profile)
         if (persist) saveBool(profile, DolbyConstants.PREF_HP_VIRTUALIZER, value)
     }
 
     fun getSpeakerVirtEnabled(profile: Int = this.profile) =
-        readOr(false) {
-            dolbyEffect.getDapParameterBool(DsParam.SPEAKER_VIRTUALIZER, profile)
-        }.also { dlog(TAG, "getSpeakerVirtEnabled: $it") }
+        readOr(false) { dolbyEffect.getDapParameterBool(DsParam.SPEAKER_VIRTUALIZER, profile) }
 
     fun setSpeakerVirtEnabled(value: Boolean, profile: Int = this.profile, persist: Boolean = true) {
         if (monoSpeaker) return
-        dlog(TAG, "setSpeakerVirtEnabled: $value")
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.SPEAKER_VIRTUALIZER, value, profile)
         if (persist) saveBool(profile, DolbyConstants.PREF_SPK_VIRTUALIZER, value)
     }
 
     fun getBassEnhancerEnabled(profile: Int = this.profile) =
-        readOr(false) {
-            dolbyEffect.getDapParameterBool(DsParam.BASS_ENHANCER_ENABLE, profile)
-        }.also { dlog(TAG, "getBassEnhancerEnabled: $it") }
+        readOr(false) { dolbyEffect.getDapParameterBool(DsParam.BASS_ENHANCER_ENABLE, profile) }
 
     fun setBassEnhancerEnabled(value: Boolean, profile: Int = this.profile, persist: Boolean = true) {
-        dlog(TAG, "setBassEnhancerEnabled: $value")
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.BASS_ENHANCER_ENABLE, value, profile)
         if (persist) saveBool(profile, DolbyConstants.PREF_BASS, value)
     }
 
     fun getVirtualBassEnabled(profile: Int = this.profile) =
-        readOr(false) {
-            dolbyEffect.getDapParameterBool(DsParam.VIRTUAL_BASS_ENABLE, profile)
-        }.also { dlog(TAG, "getVirtualBassEnabled: $it") }
+        readOr(false) { dolbyEffect.getDapParameterBool(DsParam.VIRTUAL_BASS_ENABLE, profile) }
 
     fun setVirtualBassEnabled(value: Boolean, profile: Int = this.profile, persist: Boolean = true) {
-        dlog(TAG, "setVirtualBassEnabled: $value")
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.VIRTUAL_BASS_ENABLE, value, profile)
         if (persist) saveBool(profile, DolbyConstants.PREF_VIRTUAL_BASS, value)
     }
 
     fun getVolumeLevelerEnabled(profile: Int = this.profile) =
-        readOr(false) {
-            dolbyEffect.getDapParameterBool(DsParam.VOLUME_LEVELER_ENABLE, profile)
-        }.also { dlog(TAG, "getVolumeLevelerEnabled: $it") }
+        readOr(false) { dolbyEffect.getDapParameterBool(DsParam.VOLUME_LEVELER_ENABLE, profile) }
 
     fun setVolumeLevelerEnabled(value: Boolean, profile: Int = this.profile, persist: Boolean = true) {
-        dlog(TAG, "setVolumeLevelerEnabled: $value")
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.VOLUME_LEVELER_ENABLE, value, profile)
         if (persist) saveBool(profile, DolbyConstants.PREF_VOLUME, value)
@@ -461,55 +429,46 @@ internal class DolbyController private constructor(private val context: Context)
 
     fun setVolumeLevelerAmount(value: Int, profile: Int = this.profile, persist: Boolean = true) {
         val amount = value.coerceIn(DolbyConstants.VOLUME_LEVELER_AMOUNT_RANGE)
-        dlog(TAG, "setVolumeLevelerAmount: $amount")
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.VOLUME_LEVELER_AMOUNT, amount, profile)
         if (persist) saveInt(profile, DolbyConstants.PREF_VOLUME_AMOUNT, amount)
     }
 
     fun getStereoWideningAmount(profile: Int = this.profile, port: Int = getActivePort()) =
-        if (!stereoWideningSupported) {
-            0
-        } else {
-            readOr(32) {
-                dolbyEffect.getDapParameterInt(DsParam.STEREO_WIDENING_AMOUNT, profile, port)
-            }.also { dlog(TAG, "getStereoWideningAmount(profile=$profile, port=$port): $it") }
-        }
+        if (!stereoWideningSupported) 0
+        else readOr(32) { dolbyEffect.getDapParameterInt(DsParam.STEREO_WIDENING_AMOUNT, profile, port) }
 
     fun setStereoWideningAmount(
         value: Int,
         profile: Int = this.profile,
         port: Int = getActivePort(),
+        deviceKey: String = getActiveDeviceKey(),
         persist: Boolean = true,
     ) {
         if (!stereoWideningSupported) return
         val amount = value.coerceIn(DolbyConstants.STEREO_WIDENING_RANGE)
-        dlog(TAG, "setStereoWideningAmount(profile=$profile, port=$port): $amount")
         checkEffect()
         if (getStereoWideningAmount(profile, port) != amount) {
             dolbyEffect.setDapParameter(DsParam.STEREO_WIDENING_AMOUNT, amount, profile, port)
         }
-        if (persist) saveInt(profile, "${DolbyConstants.PREF_STEREO}_port_$port", amount)
+        if (persist) saveInt(profile, "${DolbyConstants.PREF_STEREO}_device_$deviceKey", amount)
     }
 
-    // Port-specific IEQ Preset matching OEM DolbyAudioEffect.getIeqPreset(port)
     fun getIeqPreset(profile: Int = this.profile, port: Int = getActivePort()) =
-        readOr(0) {
-            dolbyEffect.getDapParameterInt(DsParam.IEQ_PRESET, profile, port)
-        }.also { dlog(TAG, "getIeqPreset(profile=$profile, port=$port): $it") }
+        readOr(0) { dolbyEffect.getDapParameterInt(DsParam.IEQ_PRESET, profile, port) }
 
     fun setIeqPreset(
         value: Int,
         profile: Int = this.profile,
         port: Int = getActivePort(),
+        deviceKey: String = getActiveDeviceKey(),
         persist: Boolean = true,
     ) {
-        dlog(TAG, "setIeqPreset(profile=$profile, port=$port): $value")
         checkEffect()
         if (getIeqPreset(profile, port) != value) {
             dolbyEffect.setDapParameter(DsParam.IEQ_PRESET, value, profile, port)
         }
-        if (persist) saveInt(profile, "${DolbyConstants.PREF_IEQ}_port_$port", value)
+        if (persist) saveInt(profile, "${DolbyConstants.PREF_IEQ}_device_$deviceKey", value)
     }
 
     fun getIeqAmount(profile: Int = this.profile) =
@@ -517,7 +476,6 @@ internal class DolbyController private constructor(private val context: Context)
 
     fun setIeqAmount(value: Int, profile: Int = this.profile, persist: Boolean = true) {
         val amount = value.coerceIn(DolbyConstants.IEQ_AMOUNT_RANGE)
-        dlog(TAG, "setIeqAmount: $amount")
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.IEQ_AMOUNT, amount, profile)
         if (persist) saveInt(profile, DolbyConstants.PREF_IEQ_AMOUNT, amount)
@@ -526,12 +484,7 @@ internal class DolbyController private constructor(private val context: Context)
     fun getDialogueEnhancerEnabled(profile: Int = this.profile) =
         readOr(false) { dolbyEffect.getDapParameterBool(DsParam.DIALOGUE_ENHANCER_ENABLE, profile) }
 
-    fun setDialogueEnhancerEnabled(
-        value: Boolean,
-        profile: Int = this.profile,
-        persist: Boolean = true,
-    ) {
-        dlog(TAG, "setDialogueEnhancerEnabled: $value")
+    fun setDialogueEnhancerEnabled(value: Boolean, profile: Int = this.profile, persist: Boolean = true) {
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.DIALOGUE_ENHANCER_ENABLE, value, profile)
         if (persist) saveBool(profile, DolbyConstants.PREF_DIALOGUE_ENABLE, value)
@@ -542,7 +495,6 @@ internal class DolbyController private constructor(private val context: Context)
 
     fun setDialogueEnhancerAmount(value: Int, profile: Int = this.profile, persist: Boolean = true) {
         val amount = value.coerceIn(DolbyConstants.DIALOGUE_AMOUNT_RANGE)
-        dlog(TAG, "setDialogueEnhancerAmount: $amount")
         checkEffect()
         if (getDialogueEnhancerAmount(profile) != amount) {
             dolbyEffect.setDapParameter(DsParam.DIALOGUE_ENHANCER_AMOUNT, amount, profile)
@@ -553,12 +505,7 @@ internal class DolbyController private constructor(private val context: Context)
     fun getReverbReductionEnabled(profile: Int = this.profile) =
         readOr(false) { dolbyEffect.getDapParameterBool(DsParam.REVERB_REDUCTION_ENABLE, profile) }
 
-    fun setReverbReductionEnabled(
-        value: Boolean,
-        profile: Int = this.profile,
-        persist: Boolean = true,
-    ) {
-        dlog(TAG, "setReverbReductionEnabled: $value")
+    fun setReverbReductionEnabled(value: Boolean, profile: Int = this.profile, persist: Boolean = true) {
         checkEffect()
         dolbyEffect.setDapParameter(DsParam.REVERB_REDUCTION_ENABLE, value, profile)
         if (persist) saveBool(profile, DolbyConstants.PREF_REVERB_ENABLE, value)
@@ -569,12 +516,57 @@ internal class DolbyController private constructor(private val context: Context)
 
     fun setReverbReductionAmount(value: Int, profile: Int = this.profile, persist: Boolean = true) {
         val amount = value.coerceIn(DolbyConstants.REVERB_REDUCTION_AMOUNT_RANGE)
-        dlog(TAG, "setReverbReductionAmount: $amount")
         checkEffect()
         if (getReverbReductionAmount(profile) != amount) {
             dolbyEffect.setDapParameter(DsParam.REVERB_REDUCTION_AMOUNT, amount, profile)
         }
         if (persist) saveInt(profile, DolbyConstants.PREF_REVERB, amount)
+    }
+
+    fun getGraphicEqualizerBandGains(): IntArray =
+        readOr(IntArray(20)) { dolbyEffect.getDapParameter(DsParam.GEQ_BAND_GAINS) }
+
+    fun setGraphicEqualizerBandGains(gains: IntArray) {
+        if (gains.size == 20 && checkEffect()) {
+            dolbyEffect.setDapParameter(DsParam.GEQ_BAND_GAINS, gains)
+        }
+    }
+
+    fun getGeq10BandUiGains(): List<Float> {
+        val raw = getGraphicEqualizerBandGains().clone()
+        val uiGains = FloatArray(10)
+        for (i in 0 until 10) {
+            uiGains[i] = (raw[i * 2] / 16f).coerceIn(-5f, 5f)
+        }
+        return uiGains.toList()
+    }
+
+    fun setGeqBarGain(barIndex: Int, gainDb: Float) {
+        if (barIndex !in 0..9) return
+        val raw = getGraphicEqualizerBandGains().clone()
+        val uiGains = FloatArray(10) { i -> (raw[i * 2] / 16f).coerceIn(-5f, 5f) }
+        uiGains[barIndex] = gainDb.coerceIn(-5f, 5f)
+        applyBarToRawGains(barIndex, uiGains, raw)
+        setGraphicEqualizerBandGains(raw)
+    }
+
+    private fun applyBarToRawGains(barIndex: Int, uiGains: FloatArray, raw: IntArray) {
+        when (barIndex) {
+            0 -> {
+                raw[0] = (uiGains[0] * 16f).toInt()
+                raw[1] = (((uiGains[0] + uiGains[1]) / 2f) * 16f).toInt()
+            }
+            9 -> {
+                raw[17] = (((uiGains[8] + uiGains[9]) / 2f) * 16f).toInt()
+                raw[18] = (uiGains[9] * 16f).toInt()
+                raw[19] = (uiGains[9] * 16f).toInt()
+            }
+            else -> {
+                raw[barIndex * 2 - 1] = (((uiGains[barIndex - 1] + uiGains[barIndex]) / 2f) * 16f).toInt()
+                raw[barIndex * 2] = (uiGains[barIndex] * 16f).toInt()
+                raw[barIndex * 2 + 1] = (((uiGains[barIndex] + uiGains[barIndex + 1]) / 2f) * 16f).toInt()
+            }
+        }
     }
 
     companion object {

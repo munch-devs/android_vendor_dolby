@@ -14,7 +14,8 @@ internal data class DolbyUiState(
     val dsOn: Boolean = true,
     val profile: Int = 0,
     val activePort: Int = DsTuning.INTERNAL_SPEAKER.id,
-    val headsetModeSelected: Boolean = false,
+    val activeDeviceKey: String = "speaker",
+    val activeDeviceName: String = "Phone Speaker",
     val ieq: Int = 0,
     val ieqAmount: Int = 6,
     val dialogueOn: Boolean = false,
@@ -39,16 +40,4 @@ internal data class DolbyUiState(
 
     val isExternalDisplayAudio: Boolean
         get() = activePort == DsTuning.HDMI.id || activePort == DsTuning.MIRACAST.id
-
-    val isDeviceModeMismatch: Boolean
-        get() = headsetModeSelected && !isHeadsetConnected
-
-    val effectivePort: Int
-        get() = if (!headsetModeSelected) {
-            DsTuning.INTERNAL_SPEAKER.id
-        } else if (isHeadsetConnected) {
-            activePort
-        } else {
-            DsTuning.HEADPHONE.id
-        }
 }
