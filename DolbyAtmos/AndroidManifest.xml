@@ -9,6 +9,8 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <protected-broadcast android:name="com.dolby.intent.action.DAP_PARAMS_UPDATE" />
+
     <application
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
