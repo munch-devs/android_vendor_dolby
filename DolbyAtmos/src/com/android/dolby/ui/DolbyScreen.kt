@@ -8,9 +8,13 @@ package com.android.dolby.ui
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -150,6 +154,7 @@ internal fun DolbyScreen(
 
     var modalDialog by remember { mutableStateOf<ModalDialog?>(null) }
     var showMenu by remember { mutableStateOf(false) }
+
     var tab by rememberSaveable { mutableIntStateOf(TAB_HOME) }
 
     val profiles = rememberChoices(R.array.dolby_profile_entries, R.array.dolby_profile_values)
@@ -158,7 +163,7 @@ internal fun DolbyScreen(
     val heroSummary =
         when {
             !state.dsOn -> stringResource(R.string.dolby_off)
-            profileName.isNotEmpty() -> stringResource(R.string.dolby_on_with_profile_and_device, profileName, state.activeDeviceName)
+            profileName.isNotEmpty() -> stringResource(R.string.dolby_on_with_profile, profileName)
             else -> stringResource(R.string.dolby_on)
         }
 
@@ -211,6 +216,7 @@ internal fun DolbyScreen(
                             )
                         }
                     }
+
                     if (tab != TAB_EQUALIZER) {
                         Box(Modifier.padding(end = 8.dp)) {
                             IconButton(onClick = { showMenu = true }) {
@@ -219,6 +225,7 @@ internal fun DolbyScreen(
                                     contentDescription = stringResource(R.string.dolby_more_options),
                                 )
                             }
+
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.dolby_explore_title)) },
@@ -292,11 +299,21 @@ internal fun DolbyScreen(
                 }
             }
         } else {
-            Crossfade(
+            AnimatedContent(
                 targetState = tab,
-                label = "tab",
+                label = "tab_animation",
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        slideInHorizontally(animationSpec = tween(300)) { width -> width } togetherWith
+                                slideOutHorizontally(animationSpec = tween(300)) { width -> -width }
+                    } else {
+                        slideInHorizontally(animationSpec = tween(300)) { width -> -width } togetherWith
+                                slideOutHorizontally(animationSpec = tween(300)) { width -> width }
+                    }
+                },
                 modifier =
-                    Modifier.fillMaxSize()
+                    Modifier
+                        .fillMaxSize()
                         .padding(
                             top = pad.calculateTopPadding(),
                             start = pad.calculateStartPadding(direction),
@@ -315,7 +332,9 @@ internal fun DolbyScreen(
                             )
                         TAB_EQUALIZER ->
                             Column(
-                                Modifier.padding(horizontal = 16.dp).graphicsLayer { alpha = contentAlpha }
+                                Modifier
+                                    .padding(horizontal = 16.dp)
+                                    .graphicsLayer { alpha = contentAlpha }
                             ) {
                                 equalizer(canReset)
                             }
@@ -346,6 +365,7 @@ internal fun DolbyScreen(
                 },
                 onDismiss = { modalDialog = null },
             )
+
         ModalDialog.RESET_ALL ->
             ConfirmDialog(
                 title = stringResource(R.string.dolby_reset_all),
@@ -357,11 +377,13 @@ internal fun DolbyScreen(
                 },
                 onDismiss = { modalDialog = null },
             )
+
         ModalDialog.PROFILE_HELP ->
             ProfileHelpDialog(
                 profile = state.profile,
                 onDismiss = { modalDialog = null },
             )
+
         ModalDialog.EXPLORE_DOLBY ->
             AlertDialog(
                 onDismissRequest = { modalDialog = null },
@@ -402,6 +424,7 @@ internal fun DolbyScreen(
                     }
                 },
             )
+
         null -> {}
     }
 }

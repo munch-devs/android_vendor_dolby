@@ -50,14 +50,10 @@ private class Plot(
 ) {
     val w = width - left - right
     val h = height - top - bottom
-
     fun x(i: Int) = left + w * i / (bands - 1).coerceAtLeast(1)
-
     fun y(gain: Int) = top + h * (1f - (gain + MAX_GAIN) / (2f * MAX_GAIN))
-
     fun nearestBand(x: Float) =
         (((x - left) / w) * (bands - 1)).roundToInt().coerceIn(0, bands - 1)
-
     fun gainAt(y: Float): Int {
         val raw = ((1f - (y - top) / h) * 2f * MAX_GAIN - MAX_GAIN).coerceIn(-MAX_GAIN.toFloat(), MAX_GAIN.toFloat())
         return (raw / SNAP).roundToInt() * SNAP
@@ -82,6 +78,15 @@ internal fun EqualizerCurve(
     val measurer = rememberTextMeasurer()
     val axisStyle = MaterialTheme.typography.labelSmall.copy(color = cs.onSurfaceVariant)
     val valueStyle = MaterialTheme.typography.labelMedium.copy(color = cs.primary)
+
+    val curvePath = remember { Path() }
+    val areaPath = remember { Path() }
+    val hzLabels = remember(gains) { gains.map { formatHz(it.band) } }
+    val axisLabels = remember { 
+        listOf(100, 50, 0, -50, -100).map { 
+            it to (if (it > 0) "+${it / 10}" else "${it / 10}") 
+        } 
+    }
 
     fun commit(i: Int) {
         if (i in live.indices && live[i] != committed[i].gain) finished(i, live[i])
@@ -129,7 +134,7 @@ internal fun EqualizerCurve(
         if (n < 2) return@Canvas
         val plot = plotFor(size, n)
 
-        for (g in listOf(100, 50, 0, -50, -100)) {
+        axisLabels.forEach { (g, labelText) ->
             val y = plot.y(g)
             drawLine(
                 color = if (g == 0) cs.outline else cs.outlineVariant,
@@ -138,40 +143,43 @@ internal fun EqualizerCurve(
                 strokeWidth = if (g == 0) 1.5.dp.toPx() else 1.dp.toPx(),
             )
             if (g % 100 == 0) {
-                val label = measurer.measure(if (g > 0) "+${g / 10}" else "${g / 10}", axisStyle)
+                val label = measurer.measure(labelText, axisStyle)
                 drawText(label, topLeft = Offset(plot.left - 8.dp.toPx() - label.size.width, y - label.size.height / 2f))
             }
         }
 
-        val curve = Path().apply {
-            moveTo(plot.x(0), plot.y(live[0]))
-            for (i in 1 until n) {
-                val mid = (plot.x(i - 1) + plot.x(i)) / 2f
-                cubicTo(mid, plot.y(live[i - 1]), mid, plot.y(live[i]), plot.x(i), plot.y(live[i]))
-            }
+        curvePath.rewind()
+        areaPath.rewind()
+
+        curvePath.moveTo(plot.x(0), plot.y(live[0]))
+        for (i in 1 until n) {
+            val mid = (plot.x(i - 1) + plot.x(i)) / 2f
+            curvePath.cubicTo(mid, plot.y(live[i - 1]), mid, plot.y(live[i]), plot.x(i), plot.y(live[i]))
         }
-        val area = Path().apply {
-            addPath(curve)
-            lineTo(plot.x(n - 1), plot.y(0))
-            lineTo(plot.x(0), plot.y(0))
-            close()
-        }
-        drawPath(area, cs.primary.copy(alpha = 0.14f))
-        drawPath(curve, cs.primary, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+
+        areaPath.addPath(curvePath)
+        areaPath.lineTo(plot.x(n - 1), plot.y(0))
+        areaPath.lineTo(plot.x(0), plot.y(0))
+        areaPath.close()
+
+        drawPath(areaPath, cs.primary.copy(alpha = 0.14f))
+        drawPath(curvePath, cs.primary, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 
         for (i in 0 until n) {
             val c = Offset(plot.x(i), plot.y(live[i]))
             val isActive = i == active
+
             drawCircle(cs.primary, radius = (if (isActive) 9 else 6).dp.toPx(), center = c)
             drawCircle(cs.surfaceContainerHigh, radius = (if (isActive) 4f else 2.5f).dp.toPx(), center = c)
 
             if (n <= 10 || i % 2 == 0) {
-                val f = measurer.measure(formatHz(gains[i].band), axisStyle)
+                val f = measurer.measure(hzLabels[i], axisStyle)
                 drawText(f, topLeft = Offset(c.x - f.size.width / 2f, plot.top + plot.h + 6.dp.toPx()))
             }
 
             if (isActive) {
-                val v = measurer.measure("%+.1f dB".format(live[i] / 10f), valueStyle)
+                val dbText = if (live[i] > 0) "+%.1f dB".format(live[i] / 10f) else "%.1f dB".format(live[i] / 10f)
+                val v = measurer.measure(dbText, valueStyle)
                 val above = c.y - v.size.height - 14.dp.toPx() >= 0f
                 val ty = if (above) c.y - v.size.height - 12.dp.toPx() else c.y + 12.dp.toPx()
                 drawText(v, topLeft = Offset((c.x - v.size.width / 2f).coerceIn(0f, size.width - v.size.width), ty))
